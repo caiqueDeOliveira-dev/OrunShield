@@ -24,13 +24,43 @@ function resolveRulesDir() {
   return candidates[0];
 }
 
+// Resolve binário + banco do ClamAV em ordem de prioridade:
+//   1) embutido no instalador (extraResources -> process.resourcesPath/clamav)
+//   2) instalação do sistema (C:\Program Files\ClamAV, configurável via CLAMAV_DIR)
+// Banco: usa o da pasta embutida/sistema se existir; senão %LOCALAPPDATA%\ClamAV\database
+// (writable — permite freshclam atualizar assinaturas sem admin).
+function resolveClamAVPaths() {
+  const candidates = [];
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, "clamav"));
+  }
+  candidates.push(process.env.CLAMAV_DIR || "C:\\Program Files\\ClamAV");
+  for (const dir of candidates) {
+    try {
+      const bin = path.join(dir, "clamscan.exe");
+      if (fs.existsSync(bin)) {
+        const dbCandidates = [
+          path.join(dir, "database"),
+          path.join(app.getPath("userData"), "clamav-database"),
+          path.join(app.getPath("home"), "AppData", "Local", "ClamAV", "database"),
+        ];
+        const databasePath =
+          dbCandidates.find((d) => fs.existsSync(path.join(d, "daily.cvd"))) ?? dbCandidates[1];
+        return { binaryPath: bin, databasePath };
+      }
+    } catch { /* ignore */ }
+  }
+  return { binaryPath: "clamscan", databasePath: undefined };
+}
+
 function initializeShield(mainWindow) {
   if (shield) return shield;
   const userDataDir = app.getPath("userData");
   const rulesDir = resolveRulesDir();
+  const clamav = resolveClamAVPaths();
 
   shield = new ShieldCore({
-    clamav: { useDaemon: false },
+    clamav: { useDaemon: false, ...clamav },
     virustotal: process.env.ORUN_VT_API_KEY ? { apiKey: process.env.ORUN_VT_API_KEY } : undefined,
     yara: { rulesDir },
     sentinel: {

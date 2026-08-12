@@ -1,6 +1,7 @@
 node_modules/
 renderer/dist/
 dist-app/
+resources/clamav/
 *.log
 
 # O dist/ vendored é necessário em runtime (file:vendor/... aponta p/ dist/index.js)

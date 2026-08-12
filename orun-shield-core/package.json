@@ -1,0 +1,29 @@
+{
+  "name": "@orun/shield-core",
+  "version": "0.1.0",
+  "description": "Suite de segurança desktop do Orun OS: detecção de malware, monitoramento comportamental, firewall e integridade de sistema.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "systeminformation": "^5.23.5",
+    "node-fetch": "^3.3.2",
+    "chokidar": "^3.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10",
+    "@types/node": "^20.14.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

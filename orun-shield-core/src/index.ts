@@ -1,0 +1,26 @@
+export * from "./types.js";
+export { ClamAVScanner, type ClamAVConfig } from "./clamav/ClamAVScanner.js";
+export { VirusTotalClient, type VirusTotalConfig } from "./virustotal/VirusTotalClient.js";
+export { YaraEngine, type YaraConfig } from "./yara/YaraEngine.js";
+export { ProcessMonitor, type ProcessMonitorConfig, type ProcessTreeNode } from "./sentinel/ProcessMonitor.js";
+export { NetworkMonitor, type NetworkMonitorConfig } from "./sentinel/NetworkMonitor.js";
+export { FileIntegrityMonitor, type FileIntegrityMonitorConfig } from "./sentinel/FileIntegrityMonitor.js";
+export {
+  RansomwareHeuristicMonitor,
+  type RansomwareHeuristicConfig,
+} from "./sentinel/RansomwareHeuristicMonitor.js";
+export { FileAnalyzer, type FileAnalyzerConfig, type FileAnalysisResult } from "./analyzer/FileAnalyzer.js";
+export {
+  DefenderBridge,
+  type DefenderBridgeConfig,
+  type DefenderStatus,
+} from "./defender/DefenderBridge.js";
+export { FirewallManager, type FirewallRule } from "./firewall/FirewallManager.js";
+export { BinaryVerifier } from "./integrity/BinaryVerifier.js";
+export {
+  QuarantineManager,
+  type QuarantineManagerConfig,
+  type QuarantineEntry,
+  type QuarantineActionResult,
+} from "./quarantine/QuarantineManager.js";
+export { ShieldCore, type ShieldCoreConfig } from "./orchestrator/ShieldCore.js";

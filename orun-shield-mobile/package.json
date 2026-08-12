@@ -1,0 +1,32 @@
+{
+  "name": "@orun/shield-mobile",
+  "version": "0.1.0",
+  "description": "Camada de segurança mobile do Orun OS: verificação de links, detecção de root/jailbreak e checagem de arquivos recebidos in-app. Respeita as restrições reais de sandboxing do iOS/Android — não tenta escanear o sistema como um antivírus desktop.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orun/shield-core": "workspace:*",
+    "zod": "^3.23.8",
+    "expo-crypto": "~14.0.0",
+    "expo-device": "~7.0.0",
+    "expo-secure-store": "~14.0.0",
+    "jail-monkey": "^2.8.0",
+    "react-native-ssl-public-key-pinning": "^1.2.6"
+  },
+  "peerDependencies": {
+    "react-native": "*",
+    "expo": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10",
+    "@types/node": "^20.14.0"
+  }
+}

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Env files — nunca commitar segredos reais
+.env
+.env.local
+.env.*.local
+
+# Editor/backup cruft
+*.bak
+*.tmp
+
+# OS/editor cruft
+.DS_Store
+*.log
+npm-debug.log*
+
+# Vitest/coverage
+coverage/

@@ -19,11 +19,20 @@ type UpdateState = {
   message: string;
   updated: number;
   failed: number;
+  total: number;
+  failures: { name: string; error: string }[];
 };
 
 export default function App() {
   const [view, setView] = useState<View>("shield");
-  const [updateState, setUpdateState] = useState<UpdateState>({ phase: "idle", message: "", updated: 0, failed: 0 });
+  const [updateState, setUpdateState] = useState<UpdateState>({
+    phase: "idle",
+    message: "",
+    updated: 0,
+    failed: 0,
+    total: 0,
+    failures: [],
+  });
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
 
   useEffect(() => {
@@ -32,34 +41,55 @@ export default function App() {
 
   async function handleQuickUpdate() {
     if (updateState.phase === "checking" || updateState.phase === "updating") return;
-    setUpdateState({ phase: "checking", message: "Verificando atualizações...", updated: 0, failed: 0 });
+    setUpdateState({ phase: "checking", message: "Verificando atualizações...", updated: 0, failed: 0, total: 0, failures: [] });
     try {
       const result = await window.orunOptimizer.checkUpdates();
       const outdated = result?.outdated ?? [];
       if (outdated.length === 0) {
-        setUpdateState({ phase: "done", message: "Tudo em dia — nenhuma atualização pendente.", updated: 0, failed: 0 });
+        setUpdateState({ phase: "done", message: "Tudo em dia — nenhuma atualização pendente.", updated: 0, failed: 0, total: 0, failures: [] });
         return;
       }
       setUpdateState({
         phase: "updating",
-        message: `Atualizando ${outdated.length} pacote(s)...`,
+        message: `Atualizando 0 de ${outdated.length}...`,
         updated: 0,
         failed: 0,
+        total: outdated.length,
+        failures: [],
       });
-      const results = await window.orunOptimizer.runUpdatesBatch(outdated.map((p) => p.id));
-      const okCount = results.filter((r) => r.success).length;
-      const failCount = results.length - okCount;
+      const ok: string[] = [];
+      const failures: { name: string; error: string }[] = [];
+      for (let i = 0; i < outdated.length; i++) {
+        const pkg = outdated[i];
+        setUpdateState({
+          phase: "updating",
+          message: `Atualizando ${i + 1} de ${outdated.length}: ${pkg.displayName}`,
+          updated: ok.length,
+          failed: failures.length,
+          total: outdated.length,
+          failures,
+        });
+        const r = await window.orunOptimizer.runUpdate(pkg.id);
+        if (r.success) {
+          ok.push(pkg.displayName);
+        } else {
+          failures.push({ name: pkg.displayName, error: r.error ?? "Falha desconhecida" });
+        }
+      }
+      const failCount = failures.length;
       setUpdateState({
         phase: "done",
         message:
           failCount === 0
-            ? `${okCount} pacote(s) atualizado(s).`
-            : `${okCount} atualizado(s), ${failCount} falhou(ram).`,
-        updated: okCount,
+            ? `${ok.length} pacote(s) atualizado(s).`
+            : `${ok.length} atualizado(s), ${failCount} falhou(ram).`,
+        updated: ok.length,
         failed: failCount,
+        total: outdated.length,
+        failures,
       });
     } catch (err) {
-      setUpdateState({ phase: "done", message: `Falha ao verificar atualizações: ${String(err)}`, updated: 0, failed: 0 });
+      setUpdateState({ phase: "done", message: `Falha ao verificar atualizações: ${String(err)}`, updated: 0, failed: 0, total: 0, failures: [] });
     }
   }
 
@@ -116,18 +146,32 @@ export default function App() {
             </span>
           </Button>
           {updateState.phase === "done" && (
-            <p
-              className={`flex items-start gap-1.5 text-[11px] leading-snug ${
-                updateState.failed > 0 ? "text-amber-400" : "text-emerald-400"
-              }`}
-            >
-              {updateState.failed > 0 ? (
-                <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
-              ) : (
-                <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
+            <div className="flex flex-col gap-1">
+              <p
+                className={`flex items-start gap-1.5 text-[11px] leading-snug ${
+                  updateState.failed > 0 ? "text-amber-400" : "text-emerald-400"
+                }`}
+              >
+                {updateState.failed > 0 ? (
+                  <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
+                )}
+                <span>{updateState.message}</span>
+              </p>
+              {updateState.failures.length > 0 && (
+                <div className="flex flex-col gap-1.5 pl-4">
+                  {updateState.failures.map((f) => (
+                    <div key={f.name} className="flex flex-col text-[11px] leading-snug">
+                      <span className="text-ink-2">{f.name}</span>
+                      <span className="truncate text-ink-3" title={f.error}>
+                        {f.error}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
-              <span>{updateState.message}</span>
-            </p>
+            </div>
           )}
           <div className="flex items-center gap-2 px-1 text-[11px] text-ink-3">
             <Cpu className="h-3.5 w-3.5" />

@@ -1,7 +1,7 @@
 {
   "name": "orun-shield-app",
   "productName": "Orun Shield",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Orun Shield standalone — Antivírus + Otimizador em um app só.",
   "main": "electron/main.cjs",
   "author": "Orun",
@@ -69,7 +69,8 @@
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "renderer/public/logo.png"
     }
   },
   "allowScripts": {

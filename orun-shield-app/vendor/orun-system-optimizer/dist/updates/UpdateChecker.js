@@ -22,7 +22,7 @@ class UpdateChecker {
             "upgrade",
             "--include-unknown",
             "--accept-source-agreements",
-        ]).catch(() => "");
+        ], { timeoutMs: 3 * 60 * 1000 }).catch(() => "");
         return {
             source: "winget",
             outdated: this.parseWingetOutput(output),
@@ -56,15 +56,25 @@ class UpdateChecker {
         }
     }
     /**
-     * winget imprime uma tabela alinhada por espaços (não há um modo JSON
-     * universal em todas as versões). Parsing por colunas de largura fixa é
-     * frágil a mudanças de localização/idioma do Windows — documentado como
-     * limitação conhecida no README.
+     * winget imprime uma tabela alinhada por colunas (não há um modo JSON
+     * universal em todas as versões). O parsing por offsets de coluna (posição
+     * de cada cabeçalho na linha do header) é robusto a nomes/IDs com espaços
+     * internos — a abordagem de separar por "2+ espaços" quebra quando o valor
+     * de uma coluna termina exatamente na borda e o próximo começa com 1 espaço.
+     * A saída é normalizada (strip de BOM UTF-8 e CR de CRLF) porque o BOM
+     * desloca os offsets do header em 1 caractere.
      */
     parseWingetOutput(output) {
-        const lines = output.split("\n").map((l) => l.trimEnd());
+        const lines = output.replace(/^\ufeff/, "").replace(/\r/g, "").split("\n").map((l) => l.trimEnd());
         const headerIndex = lines.findIndex((l) => /^Name\s+Id\s+Version\s+Available/i.test(l.trim()));
         if (headerIndex === -1)
+            return [];
+        const header = lines[headerIndex];
+        const colName = header.indexOf("Name");
+        const colId = header.indexOf("Id");
+        const colVersion = header.indexOf("Version");
+        const colAvailable = header.indexOf("Available");
+        if (colName < 0 || colId < 0 || colVersion < 0 || colAvailable < 0)
             return [];
         const results = [];
         for (let i = headerIndex + 1; i < lines.length; i++) {
@@ -73,11 +83,10 @@ class UpdateChecker {
                 continue;
             if (/upgrades available|no applicable update/i.test(line))
                 break;
-            // Colunas separadas por 2+ espaços.
-            const columns = line.trim().split(/\s{2,}/);
-            if (columns.length < 4)
-                continue;
-            const [displayName, id, currentVersion, availableVersion] = columns;
+            const displayName = line.slice(colName, colId).trim();
+            const id = line.slice(colId, colVersion).trim();
+            const currentVersion = line.slice(colVersion, colAvailable).trim();
+            const availableVersion = line.slice(colAvailable).trim().split(/\s+/)[0] ?? "";
             if (!displayName || !id || !currentVersion || !availableVersion)
                 continue;
             results.push({ id, displayName, currentVersion, availableVersion, source: "winget" });
@@ -129,20 +138,41 @@ class UpdateChecker {
         }
         return results;
     }
-    run(bin, args) {
+    run(bin, args, { timeoutMs = 5 * 60 * 1000 } = {}) {
         return new Promise((resolve, reject) => {
-            const child = (0, node_child_process_1.spawn)(bin, args);
+            const child = (0, node_child_process_1.spawn)(bin, args, { windowsHide: true });
             let stdout = "";
             let stderr = "";
+            let settled = false;
+            const finish = (fn, value) => {
+                if (settled)
+                    return;
+                settled = true;
+                clearTimeout(timer);
+                fn(value);
+            };
+            const killTree = () => {
+                try {
+                    if (process.platform === "win32")
+                        (0, node_child_process_1.spawn)("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true });
+                    else
+                        child.kill("SIGKILL");
+                }
+                catch { /* best-effort */ }
+            };
+            const timer = setTimeout(() => {
+                killTree();
+                finish(reject, new Error(`${bin} excedeu o tempo limite de ${Math.round(timeoutMs / 60000)} min e foi encerrado.`));
+            }, timeoutMs);
             child.stdout.on("data", (c) => (stdout += c.toString()));
             child.stderr.on("data", (c) => (stderr += c.toString()));
-            child.on("error", reject);
+            child.on("error", (err) => finish(reject, err));
             child.on("close", (code) => {
                 // apt "list --upgradable" retorna 0 mesmo com avisos no stderr (ex: "apt does not have a stable CLI").
                 if (code === 0)
-                    resolve(stdout);
+                    finish(resolve, stdout);
                 else
-                    reject(new Error(`${bin} finalizou com código ${code}: ${stderr || stdout}`));
+                    finish(reject, new Error(`${bin} finalizou com código ${code}: ${stderr || stdout}`));
             });
         });
     }

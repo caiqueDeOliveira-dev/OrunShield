@@ -49,19 +49,40 @@ class UpdateExecutor {
             }
         }
     }
-    run(bin, args) {
+    run(bin, args, { timeoutMs = 10 * 60 * 1000 } = {}) {
         return new Promise((resolve, reject) => {
-            const child = (0, node_child_process_1.spawn)(bin, args);
+            const child = (0, node_child_process_1.spawn)(bin, args, { windowsHide: true });
             let stdout = "";
             let stderr = "";
+            let settled = false;
+            const finish = (fn, value) => {
+                if (settled)
+                    return;
+                settled = true;
+                clearTimeout(timer);
+                fn(value);
+            };
+            const killTree = () => {
+                try {
+                    if (process.platform === "win32")
+                        (0, node_child_process_1.spawn)("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true });
+                    else
+                        child.kill("SIGKILL");
+                }
+                catch { /* best-effort */ }
+            };
+            const timer = setTimeout(() => {
+                killTree();
+                finish(reject, new Error(`${bin} excedeu o tempo limite de ${Math.round(timeoutMs / 60000)} min e foi encerrado.`));
+            }, timeoutMs);
             child.stdout.on("data", (c) => (stdout += c.toString()));
             child.stderr.on("data", (c) => (stderr += c.toString()));
-            child.on("error", reject);
+            child.on("error", (err) => finish(reject, err));
             child.on("close", (code) => {
                 if (code === 0)
-                    resolve(stdout);
+                    finish(resolve, stdout);
                 else
-                    reject(new Error(`${bin} finalizou com código ${code}: ${stderr || stdout}. Pode ser necessário rodar com privilégios elevados.`));
+                    finish(reject, new Error(`${bin} finalizou com código ${code}: ${stderr || stdout}. Pode ser necessário rodar com privilégios elevados.`));
             });
         });
     }

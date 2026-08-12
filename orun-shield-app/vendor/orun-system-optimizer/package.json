@@ -1,0 +1,10 @@
+{
+  "name": "@orun/system-optimizer",
+  "version": "0.1.0",
+  "description": "Análise de uso de disco, limpeza segura e verificação/atualização de software para o Orun OS (motor Optimizer).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}

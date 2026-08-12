@@ -1,0 +1,13 @@
+﻿{
+  "name": "@orun/shield-core",
+  "version": "0.1.0",
+  "description": "Suite de segurança desktop do Orun OS (motor Shield).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "zod": "^3.23.8",
+    "systeminformation": "^5.23.5",
+    "node-fetch": "^3.3.2",
+    "chokidar": "^3.6.0"
+  }
+}

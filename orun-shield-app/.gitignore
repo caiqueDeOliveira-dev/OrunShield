@@ -1,0 +1,8 @@
+node_modules/
+renderer/dist/
+dist-app/
+*.log
+
+# O dist/ vendored é necessário em runtime (file:vendor/... aponta p/ dist/index.js)
+!vendor/orun-shield-core/dist/
+!vendor/orun-system-optimizer/dist/

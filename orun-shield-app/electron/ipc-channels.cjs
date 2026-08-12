@@ -18,10 +18,23 @@ const ShieldIpcChannel = {
   SYNC_DEFENDER_THREATS: "shield:sync-defender-threats",
   DEFENDER_QUICK_SCAN: "shield:defender-quick-scan",
   DEFENDER_UPDATE_SIGNATURES: "shield:defender-update-signatures",
+  SCAN_PC: "shield:scan-pc",
+  SCAN_VULNERABILITIES: "shield:scan-vulnerabilities",
   THREAT_DETECTED: "shield:event:threat-detected",
   SCAN_STARTED: "shield:event:scan-started",
   SCAN_FINISHED: "shield:event:scan-finished",
+  SCAN_PC_PROGRESS: "shield:event:scan-pc-progress",
   SHIELD_ERROR: "shield:event:error",
+};
+
+const AiIpcChannel = {
+  STATUS: "ai:status",
+  GET_CONFIG: "ai:get-config",
+  SAVE_CONFIG: "ai:save-config",
+  EXPLAIN_FINDING: "ai:explain-finding",
+  SUMMARIZE_FINDINGS: "ai:summarize-findings",
+  ANALYZE_VULNERABILITIES: "ai:analyze-vulnerabilities",
+  ANALYZE_APPS: "ai:analyze-apps",
 };
 
 const OptimizerIpcChannel = {
@@ -36,10 +49,14 @@ const OptimizerIpcChannel = {
   DETECT_PACKAGE_MANAGER: "optimizer:detect-package-manager",
   RUN_UPDATE: "optimizer:run-update",
   RUN_UPDATES_BATCH: "optimizer:run-updates-batch",
+  SCAN_PC: "optimizer:scan-pc",
+  LIST_INSTALLED_APPS: "optimizer:list-installed-apps",
+  RECOMMEND_UNUSED_APPS: "optimizer:recommend-unused-apps",
+  UNINSTALL_APP: "optimizer:uninstall-app",
 };
 
 const AppIpcChannel = {
   PICK_DIRECTORY: "app:pick-directory",
 };
 
-module.exports = { ShieldIpcChannel, OptimizerIpcChannel, AppIpcChannel };
+module.exports = { ShieldIpcChannel, OptimizerIpcChannel, AiIpcChannel, AppIpcChannel };

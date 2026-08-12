@@ -4,6 +4,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const { initializeShield, shutdownShield } = require("./shield.cjs");
 const { initializeOptimizer } = require("./optimizer.cjs");
+const { CyberAi } = require("./cyber-ai.cjs");
 const { AppIpcChannel } = require("./ipc-channels.cjs");
 
 let mainWindow = null;
@@ -57,7 +58,8 @@ app.on("before-quit", async (event) => {
 
 app.whenReady().then(() => {
   createWindow();
-  initializeShield(mainWindow);
+  const cyber = new CyberAi(app.getPath("userData"));
+  initializeShield(mainWindow, { cyber });
   initializeOptimizer("shield-quarantine");
 });
 

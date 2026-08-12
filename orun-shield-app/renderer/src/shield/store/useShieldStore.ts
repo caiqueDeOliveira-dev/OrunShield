@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ThreatFinding, ScanResult, QuarantineEntry, FileAnalysisResult, ProcessTreeNode, DefenderStatus } from "@orun/shield-core";
+import type { ScanPcResult, ScanPcProgress, VulnerabilityScanResult } from "../../bridge";
 
 interface ShieldState {
   isMonitoring: boolean;
@@ -16,6 +17,11 @@ interface ShieldState {
   isLoadingProcessTree: boolean;
   defenderStatus: DefenderStatus | null;
   isSyncingDefender: boolean;
+  isScanningPc: boolean;
+  scanPcProgress: ScanPcProgress | null;
+  pcScanResult: ScanPcResult | null;
+  isScanningVulnerabilities: boolean;
+  vulnerabilityScan: VulnerabilityScanResult | null;
 
   // ações
   toggleMonitoring: () => Promise<void>;
@@ -36,6 +42,8 @@ interface ShieldState {
   runDefenderQuickScan: () => Promise<void>;
   updateDefenderSignatures: () => Promise<void>;
   hydrateFindingsLog: () => Promise<void>;
+  scanPc: () => Promise<void>;
+  scanVulnerabilities: () => Promise<void>;
   init: () => () => void; // registra listeners IPC, retorna cleanup
 }
 
@@ -60,6 +68,11 @@ export const useShieldStore = create<ShieldState>((set, get) => ({
   isLoadingProcessTree: false,
   defenderStatus: null,
   isSyncingDefender: false,
+  isScanningPc: false,
+  scanPcProgress: null,
+  pcScanResult: null,
+  isScanningVulnerabilities: false,
+  vulnerabilityScan: null,
 
   toggleMonitoring: async () => {
     const { isMonitoring } = get();
@@ -208,6 +221,34 @@ export const useShieldStore = create<ShieldState>((set, get) => ({
     set({ findings: log });
   },
 
+  scanPc: async () => {
+    set({ isScanningPc: true, scanPcProgress: null, pcScanResult: null });
+    try {
+      const result = await window.orunShield.scanPc();
+      set({ pcScanResult: result });
+      if (result.findings.length > 0) {
+        const existing = new Set(get().findings.map((f) => f.id));
+        const fresh = result.findings.filter((f) => !existing.has(f.id));
+        if (fresh.length > 0) set({ findings: [...fresh, ...get().findings] });
+      }
+    } catch (err) {
+      set({ errors: [{ source: "scan-pc", message: String(err) }, ...get().errors] });
+    } finally {
+      set({ isScanningPc: false, scanPcProgress: null });
+    }
+  },
+
+  scanVulnerabilities: async () => {
+    set({ isScanningVulnerabilities: true });
+    try {
+      set({ vulnerabilityScan: await window.orunShield.scanVulnerabilities() });
+    } catch (err) {
+      set({ errors: [{ source: "scan-vulns", message: String(err) }, ...get().errors] });
+    } finally {
+      set({ isScanningVulnerabilities: false });
+    }
+  },
+
   init: () => {
     const offThreat = window.orunShield.onThreatDetected((finding) => {
       set({ findings: [finding, ...get().findings] });
@@ -218,6 +259,9 @@ export const useShieldStore = create<ShieldState>((set, get) => ({
     const offScanFinished = window.orunShield.onScanFinished((result) => {
       set({ activeScan: null, lastScanResult: result });
     });
+    const offScanPcProgress = window.orunShield.onScanPcProgress((payload) => {
+      set({ scanPcProgress: payload });
+    });
     const offError = window.orunShield.onError((payload) => {
       set({ errors: [payload, ...get().errors].slice(0, 20) });
     });
@@ -226,6 +270,7 @@ export const useShieldStore = create<ShieldState>((set, get) => ({
       offThreat();
       offScanStarted();
       offScanFinished();
+      offScanPcProgress();
       offError();
     };
   },

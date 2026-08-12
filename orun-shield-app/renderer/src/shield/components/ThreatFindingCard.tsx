@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { X, FileWarning, Cpu, Globe, ShieldBan, ShieldX, Loader2 } from "lucide-react";
+import { X, FileWarning, Cpu, Globe, ShieldBan, ShieldX, Loader2, Cpu as CpuIcon } from "lucide-react";
 import type { ThreatFinding } from "@orun/shield-core";
 import { SeverityBadge } from "./SeverityBadge";
 
@@ -9,6 +9,9 @@ interface ThreatFindingCardProps {
   onBlockIp?: (ip: string) => void;
   onQuarantine?: (finding: ThreatFinding) => void;
   isQuarantining?: boolean;
+  onExplain?: (finding: ThreatFinding) => void;
+  isExplaining?: boolean;
+  explanation?: string;
 }
 
 const SOURCE_LABEL: Record<NonNullable<ThreatFinding["source"]>, string> = {
@@ -23,7 +26,16 @@ const SOURCE_LABEL: Record<NonNullable<ThreatFinding["source"]>, string> = {
   "windows-defender": "Windows Defender",
 };
 
-export function ThreatFindingCard({ finding, onDismiss, onBlockIp, onQuarantine, isQuarantining }: ThreatFindingCardProps) {
+export function ThreatFindingCard({
+  finding,
+  onDismiss,
+  onBlockIp,
+  onQuarantine,
+  isQuarantining,
+  onExplain,
+  isExplaining,
+  explanation,
+}: ThreatFindingCardProps) {
   const remoteIp = finding.remoteAddress?.split(":")[0];
 
   return (
@@ -98,7 +110,24 @@ export function ThreatFindingCard({ finding, onDismiss, onBlockIp, onQuarantine,
             {isQuarantining ? "Isolando..." : "Colocar em quarentena"}
           </button>
         )}
+
+        {onExplain && (
+          <button
+            onClick={() => onExplain(finding)}
+            disabled={isExplaining || !!explanation}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-900/40 px-3 py-1.5 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CpuIcon className="h-3.5 w-3.5" />}
+            {isExplaining ? "Explicando..." : explanation ? "Explicado" : "Explicar com o Sentinela"}
+          </button>
+        )}
       </div>
+
+      {explanation && (
+        <div className="mt-3 rounded-lg border border-blue-900/40 bg-blue-950/20 p-3 text-sm leading-relaxed text-zinc-300">
+          {explanation}
+        </div>
+      )}
     </motion.div>
   );
 }

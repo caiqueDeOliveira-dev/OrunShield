@@ -7,6 +7,7 @@ import type {
   OutdatedPackage,
   PackageManagerKind,
 } from "@orun/system-optimizer";
+import type { OptimizerScanPcResult, InstalledApp, RecommendUnusedAppsResult, UnusedAppRecommendation } from "../../bridge";
 
 interface OptimizerState {
   isScanningDisk: boolean;
@@ -22,6 +23,15 @@ interface OptimizerState {
   isCheckingUpdates: boolean;
   outdatedPackages: OutdatedPackage[];
   updatingPackageIds: Set<string>;
+
+  isScanningPc: boolean;
+  pcScanResult: OptimizerScanPcResult | null;
+
+  installedApps: InstalledApp[];
+  isLoadingApps: boolean;
+  isRecommending: boolean;
+  unusedRecommendations: UnusedAppRecommendation[];
+  uninstallingIds: Set<string>;
 
   errors: { context: string; message: string }[];
 
@@ -39,6 +49,11 @@ interface OptimizerState {
   checkUpdates: () => Promise<void>;
   updatePackage: (packageId: string) => Promise<void>;
   updateAllPackages: () => Promise<void>;
+
+  scanPc: () => Promise<void>;
+  listInstalledApps: () => Promise<void>;
+  recommendUnusedApps: (opts?: { unusedThresholdDays?: number; minSizeBytes?: number }) => Promise<void>;
+  uninstallApp: (recommendation: UnusedAppRecommendation, wingetId?: string) => Promise<void>;
 }
 
 export const useOptimizerStore = create<OptimizerState>((set, get) => ({
@@ -52,6 +67,16 @@ export const useOptimizerStore = create<OptimizerState>((set, get) => ({
   isCheckingUpdates: false,
   outdatedPackages: [],
   updatingPackageIds: new Set(),
+
+  isScanningPc: false,
+  pcScanResult: null,
+
+  installedApps: [],
+  isLoadingApps: false,
+  isRecommending: false,
+  unusedRecommendations: [],
+  uninstallingIds: new Set(),
+
   errors: [],
 
   scanDisk: async (path: string) => {
@@ -169,6 +194,60 @@ export const useOptimizerStore = create<OptimizerState>((set, get) => ({
       set({ outdatedPackages: get().outdatedPackages.filter((p) => failedIds.has(p.id)) });
     } finally {
       set({ updatingPackageIds: new Set() });
+    }
+  },
+
+  scanPc: async () => {
+    set({ isScanningPc: true, pcScanResult: null });
+    try {
+      set({ pcScanResult: await window.orunOptimizer.scanPc() });
+    } catch (err) {
+      set({ errors: [{ context: "scanPc", message: String(err) }, ...get().errors] });
+    } finally {
+      set({ isScanningPc: false });
+    }
+  },
+
+  listInstalledApps: async () => {
+    set({ isLoadingApps: true });
+    try {
+      set({ installedApps: await window.orunOptimizer.listInstalledApps() });
+    } catch (err) {
+      set({ errors: [{ context: "listInstalledApps", message: String(err) }, ...get().errors] });
+    } finally {
+      set({ isLoadingApps: false });
+    }
+  },
+
+  recommendUnusedApps: async (opts) => {
+    set({ isRecommending: true, unusedRecommendations: [] });
+    try {
+      const result: RecommendUnusedAppsResult = await window.orunOptimizer.recommendUnusedApps(opts);
+      set({ unusedRecommendations: result.recommendations });
+    } catch (err) {
+      set({ errors: [{ context: "recommendUnusedApps", message: String(err) }, ...get().errors] });
+    } finally {
+      set({ isRecommending: false });
+    }
+  },
+
+  uninstallApp: async (recommendation, wingetId) => {
+    const key = recommendation.app.displayName;
+    set({ uninstallingIds: new Set(get().uninstallingIds).add(key) });
+    try {
+      const result = await window.orunOptimizer.uninstallApp({ app: recommendation.app, wingetId });
+      if (result.success) {
+        set({
+          unusedRecommendations: get().unusedRecommendations.filter((r) => r.app.displayName !== key),
+          installedApps: get().installedApps.filter((a) => a.displayName !== key),
+        });
+      } else {
+        set({ errors: [{ context: "uninstall", message: result.error ?? "Falha ao desinstalar." }, ...get().errors] });
+      }
+    } finally {
+      const next = new Set(get().uninstallingIds);
+      next.delete(key);
+      set({ uninstallingIds: next });
     }
   },
 }));

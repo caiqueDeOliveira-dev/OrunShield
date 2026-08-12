@@ -3,7 +3,7 @@
 // controlado de funções (nunca o ipcRenderer cru).
 
 const { contextBridge, ipcRenderer } = require("electron");
-const { ShieldIpcChannel, OptimizerIpcChannel, AppIpcChannel } = require("./ipc-channels.cjs");
+const { ShieldIpcChannel, OptimizerIpcChannel, AiIpcChannel, AppIpcChannel } = require("./ipc-channels.cjs");
 
 function pickDirectory(defaultPath) {
   return ipcRenderer.invoke(AppIpcChannel.PICK_DIRECTORY, defaultPath);
@@ -27,6 +27,8 @@ const shieldBridge = {
   syncDefenderThreats: () => ipcRenderer.invoke(ShieldIpcChannel.SYNC_DEFENDER_THREATS),
   runDefenderQuickScan: () => ipcRenderer.invoke(ShieldIpcChannel.DEFENDER_QUICK_SCAN),
   updateDefenderSignatures: () => ipcRenderer.invoke(ShieldIpcChannel.DEFENDER_UPDATE_SIGNATURES),
+  scanPc: () => ipcRenderer.invoke(ShieldIpcChannel.SCAN_PC),
+  scanVulnerabilities: () => ipcRenderer.invoke(ShieldIpcChannel.SCAN_VULNERABILITIES),
   pickDirectory: () => pickDirectory(),
 
   onThreatDetected: (cb) => {
@@ -49,6 +51,11 @@ const shieldBridge = {
     ipcRenderer.on(ShieldIpcChannel.SHIELD_ERROR, listener);
     return () => ipcRenderer.removeListener(ShieldIpcChannel.SHIELD_ERROR, listener);
   },
+  onScanPcProgress: (cb) => {
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on(ShieldIpcChannel.SCAN_PC_PROGRESS, listener);
+    return () => ipcRenderer.removeListener(ShieldIpcChannel.SCAN_PC_PROGRESS, listener);
+  },
 };
 
 const optimizerBridge = {
@@ -63,8 +70,23 @@ const optimizerBridge = {
   checkUpdates: () => ipcRenderer.invoke(OptimizerIpcChannel.CHECK_UPDATES),
   runUpdate: (packageId) => ipcRenderer.invoke(OptimizerIpcChannel.RUN_UPDATE, packageId),
   runUpdatesBatch: (packageIds) => ipcRenderer.invoke(OptimizerIpcChannel.RUN_UPDATES_BATCH, packageIds),
+  scanPc: () => ipcRenderer.invoke(OptimizerIpcChannel.SCAN_PC),
+  listInstalledApps: () => ipcRenderer.invoke(OptimizerIpcChannel.LIST_INSTALLED_APPS),
+  recommendUnusedApps: (opts) => ipcRenderer.invoke(OptimizerIpcChannel.RECOMMEND_UNUSED_APPS, opts),
+  uninstallApp: (req) => ipcRenderer.invoke(OptimizerIpcChannel.UNINSTALL_APP, req),
   pickDirectory: () => pickDirectory(),
+};
+
+const aiBridge = {
+  getStatus: () => ipcRenderer.invoke(AiIpcChannel.STATUS),
+  getConfig: () => ipcRenderer.invoke(AiIpcChannel.GET_CONFIG),
+  saveConfig: (partial) => ipcRenderer.invoke(AiIpcChannel.SAVE_CONFIG, partial),
+  explainFinding: (finding) => ipcRenderer.invoke(AiIpcChannel.EXPLAIN_FINDING, finding),
+  summarizeFindings: (findings) => ipcRenderer.invoke(AiIpcChannel.SUMMARIZE_FINDINGS, findings),
+  analyzeVulnerabilities: (items) => ipcRenderer.invoke(AiIpcChannel.ANALYZE_VULNERABILITIES, items),
+  analyzeApps: (recommendations) => ipcRenderer.invoke(AiIpcChannel.ANALYZE_APPS, recommendations),
 };
 
 contextBridge.exposeInMainWorld("orunShield", shieldBridge);
 contextBridge.exposeInMainWorld("orunOptimizer", optimizerBridge);
+contextBridge.exposeInMainWorld("orunAi", aiBridge);

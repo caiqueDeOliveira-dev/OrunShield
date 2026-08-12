@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ShieldCheck, Power, ScanSearch, RefreshCw, FolderSearch, Loader2, ShieldX, FileSearch, Network } from "lucide-react";
+import { ShieldCheck, Power, ScanSearch, RefreshCw, FolderSearch, Loader2, ShieldX, FileSearch, Network, BrainCircuit, ShieldAlert, Gauge } from "lucide-react";
 import { useShieldStore } from "../store/useShieldStore";
+import { useAiStore } from "../../ai/store/useAiStore";
 import { ThreatFindingCard } from "../components/ThreatFindingCard";
 import { QuarantineEntryCard } from "../components/QuarantineEntryCard";
 import { FileAnalysisPanel } from "../components/FileAnalysisPanel";
@@ -45,11 +46,34 @@ export function ShieldScreen() {
     syncDefenderThreats,
     runDefenderQuickScan,
     updateDefenderSignatures,
+    isScanningPc,
+    scanPcProgress,
+    pcScanResult,
+    scanPc,
+    isScanningVulnerabilities,
+    vulnerabilityScan,
+    scanVulnerabilities,
     init,
   } = useShieldStore();
 
+  const {
+    status: aiStatus,
+    hydrate: hydrateAi,
+    explanations,
+    explainingIds,
+    explainFinding,
+    isSummarizing,
+    summary,
+    summarizeFindings,
+    isAnalyzingVulns,
+    vulnAnalysis,
+    analyzeVulnerabilities,
+  } = useAiStore();
+
   const [showQuarantine, setShowQuarantine] = useState(false);
   const [showInvestigation, setShowInvestigation] = useState(false);
+  const [showVulnerabilities, setShowVulnerabilities] = useState(false);
+  const [showAi, setShowAi] = useState(false);
   const [filePathInput, setFilePathInput] = useState("");
 
   const [isUpdatingDefs, setIsUpdatingDefs] = useState(false);
@@ -60,9 +84,21 @@ export function ShieldScreen() {
     void hydrateFindingsLog();
     void hydrateQuarantineList();
     void loadDefenderStatus();
+    void hydrateAi();
     return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- init/checkClamAv/hydrateFindingsLog são estáveis (vêm do Zustand)
   }, []);
+
+  async function handleScanVulnerabilities() {
+    setShowVulnerabilities(true);
+    await scanVulnerabilities();
+    const items = useShieldStore.getState().vulnerabilityScan?.items ?? [];
+    await analyzeVulnerabilities(items);
+  }
+
+  async function handleSummarize() {
+    await summarizeFindings(useShieldStore.getState().findings);
+  }
 
   const criticalCount = findings.filter((f) => f.severity === "critical").length;
   const highCount = findings.filter((f) => f.severity === "high").length;
@@ -143,15 +179,148 @@ export function ShieldScreen() {
           disabled={!!activeScan}
         />
         <ActionButton
+          icon={<ScanSearch className="h-4 w-4" />}
+          label="Escanear todo o PC"
+          onClick={() => void scanPc()}
+          disabled={isScanningPc}
+        />
+        <ActionButton
           icon={isUpdatingDefs ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           label="Atualizar definições"
           onClick={() => void handleUpdateDefinitions()}
           disabled={isUpdatingDefs}
         />
+        <ActionButton
+          icon={isScanningVulnerabilities ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+          label="Verificar vulnerabilidades"
+          onClick={() => void handleScanVulnerabilities()}
+          disabled={isScanningVulnerabilities}
+        />
         {activeScan && (
           <div className="flex items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400">
             <ScanSearch className="h-4 w-4 animate-pulse text-red-500" />
             Escaneando {activeScan.target}...
+          </div>
+        )}
+        {isScanningPc && (
+          <div className="flex items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400">
+            <ScanSearch className="h-4 w-4 animate-pulse text-red-500" />
+            {scanPcProgress
+              ? `Escaneando unidade ${scanPcProgress.drive} (${scanPcProgress.index + 1}/${scanPcProgress.total})...`
+              : "Preparando scan do PC..."}
+          </div>
+        )}
+        {pcScanResult && !isScanningPc && (
+          <div className="flex items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400">
+            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            {pcScanResult.drives.length} unidade(s) · {pcScanResult.totalFilesScanned} arquivos ·{" "}
+            {pcScanResult.findings.length} ameaça(s)
+          </div>
+        )}
+      </div>
+
+      {/* Vulnerabilidades */}
+      <div className="rounded-2xl border border-zinc-800">
+        <button
+          onClick={() => setShowVulnerabilities((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm text-zinc-300"
+        >
+          <span className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-red-400" />
+            Vulnerabilidades
+            {vulnerabilityScan && (
+              <span className="text-xs text-zinc-500">
+                · {vulnerabilityScan.summary.total} item(ns)
+                {vulnerabilityScan.summary.critical + vulnerabilityScan.summary.high > 0
+                  ? ` · ${vulnerabilityScan.summary.critical + vulnerabilityScan.summary.high} importante(s)`
+                  : ""}
+              </span>
+            )}
+          </span>
+          <span className="text-xs text-zinc-500">{showVulnerabilities ? "Ocultar" : "Mostrar"}</span>
+        </button>
+        {showVulnerabilities && (
+          <div className="flex flex-col gap-3 border-t border-zinc-800 p-3">
+            {isScanningVulnerabilities && (
+              <p className="flex items-center gap-2 text-xs text-zinc-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Verificando Defender, firewall e atualizações pendentes...
+              </p>
+            )}
+
+            {vulnAnalysis && (
+              <div className="rounded-lg border border-blue-900/40 bg-blue-950/20 p-3 text-sm leading-relaxed text-zinc-300">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-blue-400">Parecer do Sentinela</p>
+                <p className="whitespace-pre-line">{isAnalyzingVulns ? "Analisando..." : vulnAnalysis}</p>
+              </div>
+            )}
+
+            {vulnerabilityScan && vulnerabilityScan.items.length === 0 ? (
+              <p className="py-2 text-center text-xs text-zinc-600">Nada encontrado — defesas ativas e sem pendências críticas.</p>
+            ) : (
+              vulnerabilityScan?.items.map((item) => (
+                <div key={item.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-zinc-200">{item.title}</p>
+                    <SeverityPill severity={item.severity} />
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500">{item.description}</p>
+                  <p className="mt-1 text-xs text-emerald-400">{item.remediation}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Sentinela — painel de IA */}
+      <div className="rounded-2xl border border-zinc-800">
+        <button
+          onClick={() => setShowAi((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm text-zinc-300"
+        >
+          <span className="flex items-center gap-2">
+            <BrainCircuit className="h-4 w-4 text-blue-400" />
+            Sentinela (IA)
+          </span>
+          <span className="flex items-center gap-2 text-xs text-zinc-500">
+            {aiStatus && (
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                  aiStatus.ready
+                    ? "border-emerald-800 bg-emerald-950/40 text-emerald-400"
+                    : "border-zinc-700 bg-zinc-800/40 text-zinc-500"
+                }`}
+              >
+                {aiStatus.configuredProvider} {aiStatus.ready ? "pronto" : aiStatus.ollamaAvailable ? "conectando" : "fallback"}
+              </span>
+            )}
+            {showAi ? "Ocultar" : "Mostrar"}
+          </span>
+        </button>
+        {showAi && (
+          <div className="flex flex-col gap-3 border-t border-zinc-800 p-3">
+            <p className="text-xs text-zinc-500">
+              O Sentinela traduz alertas técnicos em linguagem clara (pt-BR). Sem provider disponível, ele usa uma
+              explicação determinística — a segurança nunca fica sem resposta.
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => void handleSummarize()}
+                disabled={isSummarizing}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-900/40 px-3 py-1.5 text-xs font-medium text-blue-300 hover:bg-blue-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSummarizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gauge className="h-3.5 w-3.5" />}
+                {isSummarizing ? "Resumindo..." : "Resumir estado geral"}
+              </button>
+            </div>
+
+            {summary && (
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm leading-relaxed text-zinc-300">
+                {summary}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -182,6 +351,9 @@ export function ShieldScreen() {
                   onBlockIp={(ip) => void blockIp(ip)}
                   onQuarantine={(f) => void quarantineFinding(f)}
                   isQuarantining={quarantiningIds.has(finding.id!)}
+                  onExplain={(f) => void explainFinding(f)}
+                  isExplaining={explainingIds.has(finding.id!)}
+                  explanation={explanations[finding.id!]?.explanation}
                 />
               ))}
             </AnimatePresence>
@@ -281,6 +453,21 @@ export function ShieldScreen() {
         )}
       </div>
     </div>
+  );
+}
+
+function SeverityPill({ severity }: { severity: string }) {
+  const tone: Record<string, string> = {
+    critical: "border-red-900 bg-red-950/40 text-red-400",
+    high: "border-orange-900 bg-orange-950/40 text-orange-400",
+    medium: "border-yellow-900 bg-yellow-950/40 text-yellow-400",
+    low: "border-zinc-700 bg-zinc-800/40 text-zinc-400",
+    info: "border-zinc-700 bg-zinc-800/40 text-zinc-500",
+  };
+  return (
+    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone[severity] ?? tone.info}`}>
+      {severity}
+    </span>
   );
 }
 

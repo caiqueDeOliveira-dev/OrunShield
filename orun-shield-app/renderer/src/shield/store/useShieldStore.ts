@@ -7,7 +7,13 @@ interface ShieldState {
   findings: ThreatFinding[];
   activeScan: { target: string; engine: string } | null;
   lastScanResult: ScanResult | null;
-  clamAvStatus: { available: boolean; version?: string } | null;
+  clamAvStatus: {
+    available: boolean;
+    version?: string;
+    databasePath?: string | null;
+    databaseAgeDays?: number | null;
+    databaseUpdatedAt?: string | null;
+  } | null;
   errors: { source: string; message: string }[];
   quarantineEntries: QuarantineEntry[];
   quarantiningIds: Set<string>;

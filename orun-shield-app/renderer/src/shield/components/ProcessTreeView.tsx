@@ -24,22 +24,22 @@ function ProcessTreeItem({ node, depth }: { node: ProcessTreeNode; depth: number
     <div>
       <button
         onClick={() => hasChildren && setExpanded((v) => !v)}
-        className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs hover:bg-zinc-900/60"
+        className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left font-mono text-xs hover:bg-panel-2/70"
         style={{ paddingLeft: `${depth * 16 + 6}px` }}
       >
         {hasChildren ? (
           expanded ? (
-            <ChevronDown className="h-3 w-3 shrink-0 text-zinc-500" />
+            <ChevronDown className="h-3 w-3 shrink-0 text-ink-3" />
           ) : (
-            <ChevronRight className="h-3 w-3 shrink-0 text-zinc-500" />
+            <ChevronRight className="h-3 w-3 shrink-0 text-ink-3" />
           )
         ) : (
           <span className="w-3 shrink-0" />
         )}
-        <Cpu className="h-3 w-3 shrink-0 text-zinc-600" />
-        <span className="text-zinc-300">{node.name}</span>
-        <span className="text-zinc-600">PID {node.pid}</span>
-        {node.cpu > 1 && <span className="ml-auto text-zinc-500">{node.cpu.toFixed(1)}% CPU</span>}
+        <Cpu className="h-3 w-3 shrink-0 text-ink-3" />
+        <span className="text-ink-2">{node.name}</span>
+        <span className="text-ink-3">PID {node.pid}</span>
+        {node.cpu > 1 && <span className="ml-auto text-ink-3">{node.cpu.toFixed(1)}% CPU</span>}
       </button>
 
       {expanded && hasChildren && (

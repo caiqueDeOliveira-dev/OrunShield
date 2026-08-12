@@ -7,27 +7,27 @@ const SEVERITY_CONFIG: Record<
 > = {
   critical: {
     label: "Crítico",
-    className: "bg-red-950/60 text-red-400 border-red-800",
+    className: "border-accent/30 bg-accent/10 text-accent",
     Icon: ShieldAlert,
   },
   high: {
     label: "Alto",
-    className: "bg-orange-950/50 text-orange-400 border-orange-800",
+    className: "border-orange-400/25 bg-orange-400/10 text-orange-300",
     Icon: AlertOctagon,
   },
   medium: {
     label: "Médio",
-    className: "bg-yellow-950/40 text-yellow-400 border-yellow-800",
+    className: "border-amber-400/25 bg-amber-400/10 text-amber-300",
     Icon: AlertTriangle,
   },
   low: {
     label: "Baixo",
-    className: "bg-blue-950/40 text-blue-400 border-blue-800",
+    className: "border-blue-400/20 bg-blue-400/5 text-blue-300",
     Icon: ShieldQuestion,
   },
   info: {
     label: "Info",
-    className: "bg-zinc-800/60 text-zinc-400 border-zinc-700",
+    className: "border-line bg-panel text-ink-3",
     Icon: Info,
   },
 };
@@ -35,9 +35,7 @@ const SEVERITY_CONFIG: Record<
 export function SeverityBadge({ severity }: { severity: ThreatFinding["severity"] }) {
   const { label, className, Icon } = SEVERITY_CONFIG[severity ?? "info"];
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${className}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${className}`}>
       <Icon className="h-3.5 w-3.5" />
       {label}
     </span>

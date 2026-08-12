@@ -23,21 +23,21 @@ export function JunkCandidateRow({ candidate, selected, onToggle }: JunkCandidat
   const { label, Icon } = CATEGORY_CONFIG[candidate.category];
 
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-zinc-900/60">
+    <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors duration-150 hover:bg-panel-2/60">
       <input
         type="checkbox"
         checked={selected}
         onChange={() => onToggle(candidate.path)}
-        className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-red-600"
+        className="h-4 w-4 rounded border-line-2 bg-sunken accent-[#ff2e36]"
       />
-      <Icon className="h-4 w-4 shrink-0 text-zinc-500" />
+      <Icon className="h-4 w-4 shrink-0 text-ink-3" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-zinc-200">{candidate.path}</p>
-        <p className="truncate text-xs text-zinc-500">
+        <p className="truncate text-sm text-ink">{candidate.path}</p>
+        <p className="truncate text-xs text-ink-3">
           {label} · {candidate.reason}
         </p>
       </div>
-      <span className="shrink-0 text-xs text-zinc-400">{formatBytes(candidate.sizeBytes)}</span>
+      <span className="shrink-0 text-xs text-ink-2">{formatBytes(candidate.sizeBytes)}</span>
     </label>
   );
 }

@@ -3,7 +3,66 @@
 // controlado de funções (nunca o ipcRenderer cru).
 
 const { contextBridge, ipcRenderer } = require("electron");
-const { ShieldIpcChannel, OptimizerIpcChannel, AiIpcChannel, AppIpcChannel } = require("./ipc-channels.cjs");
+
+// Canais IPC inline (preload roda em sandbox e não pode `require` módulos
+// locais). Manter em sincronia com electron/ipc-channels.cjs.
+const ShieldIpcChannel = {
+  START_MONITORING: "shield:start-monitoring",
+  STOP_MONITORING: "shield:stop-monitoring",
+  FULL_SCAN: "shield:full-scan",
+  GET_FINDINGS_LOG: "shield:get-findings-log",
+  CHECK_CLAMAV_AVAILABILITY: "shield:check-clamav-availability",
+  UPDATE_DEFINITIONS: "shield:update-definitions",
+  BLOCK_IP: "shield:block-ip",
+  QUARANTINE_FINDING: "shield:quarantine-finding",
+  LIST_QUARANTINE: "shield:list-quarantine",
+  RESTORE_QUARANTINE: "shield:restore-quarantine",
+  DELETE_QUARANTINE: "shield:delete-quarantine",
+  ANALYZE_FILE: "shield:analyze-file",
+  GET_PROCESS_TREE: "shield:get-process-tree",
+  GET_DEFENDER_STATUS: "shield:get-defender-status",
+  SYNC_DEFENDER_THREATS: "shield:sync-defender-threats",
+  DEFENDER_QUICK_SCAN: "shield:defender-quick-scan",
+  DEFENDER_UPDATE_SIGNATURES: "shield:defender-update-signatures",
+  SCAN_PC: "shield:scan-pc",
+  SCAN_VULNERABILITIES: "shield:scan-vulnerabilities",
+  THREAT_DETECTED: "shield:event:threat-detected",
+  SCAN_STARTED: "shield:event:scan-started",
+  SCAN_FINISHED: "shield:event:scan-finished",
+  SCAN_PC_PROGRESS: "shield:event:scan-pc-progress",
+  SHIELD_ERROR: "shield:event:error",
+};
+const AiIpcChannel = {
+  STATUS: "ai:status",
+  GET_CONFIG: "ai:get-config",
+  SAVE_CONFIG: "ai:save-config",
+  TEST_CONNECTION: "ai:test-connection",
+  EXPLAIN_FINDING: "ai:explain-finding",
+  SUMMARIZE_FINDINGS: "ai:summarize-findings",
+  ANALYZE_VULNERABILITIES: "ai:analyze-vulnerabilities",
+  ANALYZE_APPS: "ai:analyze-apps",
+};
+const OptimizerIpcChannel = {
+  SCAN_DISK_USAGE: "optimizer:scan-disk-usage",
+  SCAN_JUNK: "optimizer:scan-junk",
+  MOVE_TO_HOLDING: "optimizer:move-to-holding",
+  MOVE_MANY_TO_HOLDING: "optimizer:move-many-to-holding",
+  LIST_HOLDING: "optimizer:list-holding",
+  RESTORE_FROM_HOLDING: "optimizer:restore-from-holding",
+  DELETE_PERMANENTLY: "optimizer:delete-permanently",
+  CHECK_UPDATES: "optimizer:check-updates",
+  DETECT_PACKAGE_MANAGER: "optimizer:detect-package-manager",
+  RUN_UPDATE: "optimizer:run-update",
+  RUN_UPDATES_BATCH: "optimizer:run-updates-batch",
+  SCAN_PC: "optimizer:scan-pc",
+  LIST_INSTALLED_APPS: "optimizer:list-installed-apps",
+  RECOMMEND_UNUSED_APPS: "optimizer:recommend-unused-apps",
+  UNINSTALL_APP: "optimizer:uninstall-app",
+};
+const AppIpcChannel = {
+  PICK_DIRECTORY: "app:pick-directory",
+  GET_APP_INFO: "app:get-info",
+};
 
 function pickDirectory(defaultPath) {
   return ipcRenderer.invoke(AppIpcChannel.PICK_DIRECTORY, defaultPath);

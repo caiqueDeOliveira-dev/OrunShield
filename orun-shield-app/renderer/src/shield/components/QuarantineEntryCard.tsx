@@ -9,12 +9,14 @@ interface QuarantineEntryCardProps {
 
 export function QuarantineEntryCard({ entry, onRestore, onDeletePermanently }: QuarantineEntryCardProps) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-      <div className="flex items-center gap-3 overflow-hidden">
-        <ShieldX className="h-4 w-4 shrink-0 text-orange-400" />
-        <div className="overflow-hidden">
-          <p className="truncate text-sm text-zinc-200">{entry.originalPath}</p>
-          <p className="text-xs text-zinc-500">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-panel-2/60 p-3.5 shadow-panel">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent ring-1 ring-accent/20">
+          <ShieldX className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm text-ink">{entry.originalPath}</p>
+          <p className="truncate text-xs text-ink-3">
             {entry.finding.title} · isolado em {new Date(entry.quarantinedAt).toLocaleString("pt-BR")}
           </p>
         </div>
@@ -23,7 +25,7 @@ export function QuarantineEntryCard({ entry, onRestore, onDeletePermanently }: Q
       <div className="flex shrink-0 gap-2">
         <button
           onClick={() => onRestore(entry.id)}
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 bg-panel px-3 py-1.5 text-xs text-ink-2 transition-colors duration-150 hover:border-line-2 hover:text-ink"
           title="Restaurar pro local original (só se tiver certeza de que é falso positivo)"
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -31,7 +33,7 @@ export function QuarantineEntryCard({ entry, onRestore, onDeletePermanently }: Q
         </button>
         <button
           onClick={() => onDeletePermanently(entry.id)}
-          className="flex items-center gap-1.5 rounded-lg border border-red-900 px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-accent/25 bg-accent/10 px-3 py-1.5 text-xs text-accent transition-colors duration-150 hover:bg-accent/20"
           title="Apagar definitivamente — ação irreversível"
         >
           <Trash2 className="h-3.5 w-3.5" />

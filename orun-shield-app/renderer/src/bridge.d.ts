@@ -160,7 +160,13 @@ export interface OrunShieldBridge {
   stopMonitoring: () => Promise<void>;
   fullScan: (req: { targetPath: string; recursive?: boolean }) => Promise<{ clamav?: ScanResult; yara?: ThreatFinding[] }>;
   getFindingsLog: () => Promise<ThreatFinding[]>;
-  checkClamAvAvailability: () => Promise<{ available: boolean; version?: string }>;
+  checkClamAvAvailability: () => Promise<{
+    available: boolean;
+    version?: string;
+    databasePath?: string | null;
+    databaseAgeDays?: number | null;
+    databaseUpdatedAt?: string | null;
+  }>;
   updateDefinitions: () => Promise<{ updated: boolean; log: string }>;
   blockIp: (ip: string) => Promise<void>;
   quarantineFinding: (finding: ThreatFinding) => Promise<QuarantineActionResult>;

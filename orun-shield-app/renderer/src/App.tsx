@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Sparkles, Cpu, Settings, RefreshCw, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldCheck, Sparkles, Cpu, Settings, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { ShieldScreen } from "./shield/screens/ShieldScreen";
 import { OptimizerScreen } from "./optimizer/screens/OptimizerScreen";
 import { SettingsScreen } from "./settings/screens/SettingsScreen";
+import { Button, Spinner } from "./ui";
 import type { AppInfo } from "./bridge";
 
 type View = "shield" | "optimizer" | "settings";
 
 const NAV: { id: View; label: string; hint: string; Icon: typeof ShieldCheck }[] = [
-  { id: "shield", label: "Shield", hint: "Antivírus", Icon: ShieldCheck },
+  { id: "shield", label: "Proteção", hint: "Antivírus e defesas", Icon: ShieldCheck },
   { id: "optimizer", label: "Otimizador", hint: "Limpeza e updates", Icon: Sparkles },
-  { id: "settings", label: "Configurações", hint: "IA e sobre", Icon: Settings },
+  { id: "settings", label: "Configurações", hint: "Sentinela e sobre", Icon: Settings },
 ];
 
 type UpdateState = {
@@ -62,48 +63,50 @@ export default function App() {
     }
   }
 
+  const updating = updateState.phase === "checking" || updateState.phase === "updating";
+
   return (
-    <div className="flex h-full bg-zinc-950 text-zinc-100">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-zinc-800/80 bg-zinc-900/40 backdrop-blur">
-        <div className="flex items-center gap-3 border-b border-zinc-800/80 px-4 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-950 text-red-500">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
+    <div className="flex h-full bg-bg text-ink">
+      {/* ---------- Sidebar ---------- */}
+      <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-bg-2/80">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-4">
+          <img
+            src="logo.png"
+            alt="Orun Shield"
+            className="h-10 w-10 rounded-[10px] object-cover ring-1 ring-line-2"
+            draggable={false}
+          />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-zinc-100">Orun Shield</p>
-            <p className="truncate text-[11px] text-zinc-500">Antivírus + Otimizador</p>
+            <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-ink">Orun Shield</p>
+            <p className="truncate text-[11px] leading-tight text-ink-3">Segurança e Otimização</p>
           </div>
         </div>
 
         <nav className="flex flex-col gap-1 p-2">
-          {NAV.map(({ id, label, hint, Icon }) => (
-            <button
-              key={id}
-              onClick={() => setView(id)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                view === id ? "bg-zinc-800/80 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
-              }`}
-            >
-              <Icon className={`h-4 w-4 ${view === id ? "text-red-400" : "text-zinc-500"}`} />
-              <span className="min-w-0">
-                <span className="block text-sm font-medium">{label}</span>
-                <span className="block text-[11px] text-zinc-500">{hint}</span>
-              </span>
-            </button>
-          ))}
+          {NAV.map(({ id, label, hint, Icon }) => {
+            const active = view === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150 ${
+                  active ? "bg-panel-2 text-ink" : "text-ink-3 hover:bg-panel-2/60 hover:text-ink-2"
+                }`}
+              >
+                {active && <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent" />}
+                <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : "text-ink-3"}`} />
+                <span className="min-w-0">
+                  <span className={`block text-sm leading-tight ${active ? "font-medium" : "font-normal"}`}>{label}</span>
+                  <span className="block truncate text-[11px] leading-tight text-ink-3">{hint}</span>
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="mt-auto flex flex-col gap-2 border-t border-zinc-800/80 p-3">
-          <button
-            onClick={() => void handleQuickUpdate()}
-            disabled={updateState.phase === "checking" || updateState.phase === "updating"}
-            className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {updateState.phase === "checking" || updateState.phase === "updating" ? (
-              <Loader2 className="h-4 w-4 animate-spin text-red-400" />
-            ) : (
-              <RefreshCw className="h-4 w-4 text-red-400" />
-            )}
+        <div className="mt-auto flex flex-col gap-2 border-t border-line p-3">
+          <Button variant="secondary" onClick={() => void handleQuickUpdate()} disabled={updating} className="w-full">
+            {updating ? <Spinner /> : <RefreshCw className="h-4 w-4 text-accent" />}
             <span className="min-w-0 flex-1 truncate text-left">
               {updateState.phase === "checking"
                 ? "Verificando..."
@@ -111,7 +114,7 @@ export default function App() {
                   ? "Atualizando..."
                   : "Atualizar apps"}
             </span>
-          </button>
+          </Button>
           {updateState.phase === "done" && (
             <p
               className={`flex items-start gap-1.5 text-[11px] leading-snug ${
@@ -126,13 +129,14 @@ export default function App() {
               <span>{updateState.message}</span>
             </p>
           )}
-          <div className="flex items-center gap-2 text-[11px] text-zinc-600">
+          <div className="flex items-center gap-2 px-1 text-[11px] text-ink-3">
             <Cpu className="h-3.5 w-3.5" />
             Motores locais · v{appInfo?.version ?? "0.2.0"}
           </div>
         </div>
       </aside>
 
+      {/* ---------- Conteúdo ---------- */}
       <main className="min-w-0 flex-1 overflow-hidden">
         {view === "shield" ? (
           <ShieldScreen />

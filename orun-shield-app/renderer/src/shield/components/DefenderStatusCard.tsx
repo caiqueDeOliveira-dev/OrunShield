@@ -1,5 +1,6 @@
-import { ShieldCheck, ShieldAlert, RefreshCw, ScanSearch, Loader2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, RefreshCw, ScanSearch, ShieldAlert as ShieldWarning } from "lucide-react";
 import type { DefenderStatus } from "@orun/shield-core";
+import { Button, IconButton, Panel, Spinner, StatusPill } from "../../ui";
 
 interface DefenderStatusCardProps {
   status: DefenderStatus | null;
@@ -14,7 +15,7 @@ export function DefenderStatusCard({ status, isSyncing, onSync, onQuickScan, onU
 
   if (!status.available) {
     return (
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs text-zinc-500">
+      <div className="rounded-xl border border-line bg-panel px-4 py-3 text-xs text-ink-3 shadow-panel">
         Windows Defender não disponível nesta máquina (ou não é Windows, ou outro antivírus assumiu como AV primário).
         O Orun Shield continua funcionando normalmente com ClamAV/YARA/Sentinela.
       </div>
@@ -24,50 +25,46 @@ export function DefenderStatusCard({ status, isSyncing, onSync, onQuickScan, onU
   const isProtected = status.realTimeProtectionEnabled && status.antivirusEnabled;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <Panel flush>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+        <div className="flex items-center gap-3">
           {isProtected ? (
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-400 ring-1 ring-emerald-400/25">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
           ) : (
-            <ShieldAlert className="h-4 w-4 text-orange-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/25">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
           )}
-          <span className="text-sm text-zinc-200">
-            Windows Defender {isProtected ? "ativo" : "com proteção em tempo real desligada"}
-          </span>
+          <div>
+            <p className="text-sm font-medium text-ink">
+              Windows Defender {isProtected ? "ativo" : "com proteção em tempo real desligada"}
+            </p>
+            <p className="text-xs text-ink-3">
+              Assinaturas: {status.signatureAgeDays === 0 ? "hoje" : `${status.signatureAgeDays ?? "?"} dia(s) atrás`}
+              {status.signatureVersion ? ` · v${status.signatureVersion}` : ""}
+            </p>
+          </div>
         </div>
-        <div className="flex gap-1.5">
-          <button
-            onClick={onSync}
-            disabled={isSyncing}
-            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
-            title="Sincronizar detecções do Defender com o Shield"
-          >
-            {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-          </button>
-          <button
-            onClick={onQuickScan}
-            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-            title="Rodar scan rápido do Defender"
-          >
+
+        <div className="flex items-center gap-2">
+          {status.signatureAgeDays !== undefined && status.signatureAgeDays > 7 && (
+            <StatusPill label="Assinaturas desatualizadas" tone="warn" />
+          )}
+          <IconButton label="Sincronizar detecções do Defender" onClick={onSync} disabled={isSyncing}>
+            {isSyncing ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          </IconButton>
+          <IconButton label="Scan rápido do Defender" onClick={onQuickScan}>
             <ScanSearch className="h-3.5 w-3.5" />
-          </button>
+          </IconButton>
+          {status.signatureAgeDays !== undefined && status.signatureAgeDays > 7 && (
+            <Button variant="secondary" icon={<ShieldWarning className="h-3.5 w-3.5" />} onClick={onUpdateSignatures} className="px-3 py-1.5 text-xs">
+              Atualizar agora
+            </Button>
+          )}
         </div>
       </div>
-
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-zinc-500">
-        <span>Assinaturas: {status.signatureAgeDays === 0 ? "hoje" : `${status.signatureAgeDays ?? "?"} dia(s) atrás`}</span>
-        <span>Versão: {status.signatureVersion ?? "?"}</span>
-      </div>
-
-      {status.signatureAgeDays !== undefined && status.signatureAgeDays > 7 && (
-        <button
-          onClick={onUpdateSignatures}
-          className="mt-2 text-xs text-orange-400 hover:text-orange-300"
-        >
-          Assinaturas desatualizadas (mais de 7 dias) — clique pra atualizar agora
-        </button>
-      )}
-    </div>
+    </Panel>
   );
 }

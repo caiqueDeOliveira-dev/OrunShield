@@ -59,6 +59,136 @@ function resolveClamAVPaths() {
   return { binaryPath: "clamscan", databasePath: undefined };
 }
 
+// ---------------------------------------------------------------------------
+// Validação de inputs vindos do renderer (IPC). Nunca confiar no conteúdo do
+// renderer: cada valor é validado/tipado antes de chegar a spawn/regras.
+// ---------------------------------------------------------------------------
+
+function assertString(value, label) {
+  if (typeof value !== "string" || value.length === 0 || value.length > 4096 || value.includes("\0")) {
+    throw new Error(`${label} inválido.`);
+  }
+  return value;
+}
+
+function assertAbsolutePath(value, label = "Caminho") {
+  const v = assertString(value, label).replace(/^"|"$/g, "");
+  if (!/^[a-zA-Z]:[\\/]|^\\\\/.test(v)) {
+    throw new Error(`${label} deve ser absoluto (ex: C:\\pasta\\arquivo).`);
+  }
+  return v;
+}
+
+const IPV4_RE = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+
+function assertIp(value) {
+  const v = assertString(value, "Endereço IP").trim();
+  if (!IPV4_RE.test(v)) throw new Error("Endereço IP inválido.");
+  return v;
+}
+
+// ---------------------------------------------------------------------------
+// ClamAV: banco de assinaturas + atualização (freshclam).
+// ---------------------------------------------------------------------------
+
+/** Idade do banco de assinaturas pelo mtime dos .cvd/.cld mais recentes. */
+function readClamavDatabaseInfo() {
+  const { databasePath } = resolveClamAVPaths();
+  if (!databasePath) return { databasePath: null, databaseAgeDays: null, databaseUpdatedAt: null };
+  const names = ["daily.cvd", "daily.cld", "main.cvd", "main.cld", "bytecode.cvd"];
+  let newest = null;
+  for (const n of names) {
+    try {
+      const st = fs.statSync(path.join(databasePath, n));
+      if (st.isFile() && (newest === null || st.mtimeMs > newest.mtimeMs)) newest = st;
+    } catch { /* arquivo não existe ainda */ }
+  }
+  return {
+    databasePath,
+    databaseAgeDays: newest ? Math.max(0, Math.floor((Date.now() - newest.mtimeMs) / 86_400_000)) : null,
+    databaseUpdatedAt: newest ? new Date(newest.mtimeMs).toISOString() : null,
+  };
+}
+
+function resolveFreshclamBinary() {
+  const dirs = [];
+  if (process.resourcesPath) dirs.push(path.join(process.resourcesPath, "clamav"));
+  dirs.push(process.env.CLAMAV_DIR || "C:\\Program Files\\ClamAV");
+  for (const dir of dirs) {
+    try {
+      const bin = path.join(dir, "freshclam.exe");
+      if (fs.existsSync(bin)) return bin;
+    } catch { /* ignore */ }
+  }
+  return "freshclam";
+}
+
+/**
+ * Atualiza as assinaturas via freshclam usando um datadir gravável
+ * (userData/clamav-database) — o mesmo que o clamscan usa quando não há
+ * banco embutido. Mais robusto que o updateDefinitions() do core no Windows.
+ */
+async function refreshClamavDefinitions() {
+  if (!shield?.clamav) return { updated: false, log: "ClamAV não configurado neste ShieldCore." };
+  const databasePath = path.join(app.getPath("userData"), "clamav-database");
+  try { fs.mkdirSync(databasePath, { recursive: true }); } catch { /* best effort */ }
+  const { spawn } = require("node:child_process");
+  return new Promise((resolve) => {
+    let out = "";
+    let done = false;
+    const finish = (updated, log) => { if (!done) { done = true; resolve({ updated, log }); } };
+    let child;
+    try {
+      child = spawn(resolveFreshclamBinary(), ["--datadir", databasePath, "--no-warnings"], {
+        windowsHide: true,
+        timeout: 10 * 60_000,
+      });
+    } catch (err) {
+      return finish(false, err instanceof Error ? err.message : String(err));
+    }
+    child.stdout.on("data", (c) => (out += c.toString()));
+    child.stderr.on("data", (c) => (out += c.toString()));
+    child.on("error", (err) => finish(false, err.message));
+    child.on("close", (code) => finish(code === 0, out.trim()));
+  });
+}
+
+let clamavUpdateTimer = null;
+
+/** Auto-update: correção inicial (banco velho) + varredura diária. */
+function scheduleClamavUpdates() {
+  setTimeout(async () => {
+    try {
+      const info = readClamavDatabaseInfo();
+      if (info.databaseAgeDays === null || info.databaseAgeDays > 7) {
+        console.log("[shield] Banco de assinaturas ClamAV antigo, atualizando em segundo plano...");
+        const res = await refreshClamavDefinitions();
+        console.log("[shield] freshclam:", res.updated ? "ok" : `falhou — ${res.log}`);
+      }
+    } catch (err) {
+      console.warn("[shield] Falha no auto-update inicial:", err);
+    }
+  }, 15_000);
+
+  clamavUpdateTimer = setInterval(() => {
+    refreshClamavDefinitions()
+      .then((res) => console.log("[shield] Auto-update de definições:", res.updated ? "ok" : res.log))
+      .catch((err) => console.warn("[shield] Auto-update falhou:", err));
+  }, 24 * 60 * 60 * 1000);
+}
+
+// ---------------------------------------------------------------------------
+// Firewall: bloqueio real de IP via regra persistente do Windows.
+// ---------------------------------------------------------------------------
+
+/** Cria regra de bloqueio (entrada + saída) para um IPv4 via netsh advfirewall. */
+async function blockIpReal(ip) {
+  const clean = assertIp(ip);
+  const ruleName = `Orun Shield: Block ${clean}`;
+  await execPowerShell(`netsh advfirewall firewall add rule name="${ruleName}" dir=out action=block remoteip=${clean} profile=any`);
+  await execPowerShell(`netsh advfirewall firewall add rule name="${ruleName}" dir=in action=block remoteip=${clean} profile=any`);
+}
+
 function initializeShield(mainWindow, opts = {}) {
   if (shield) return shield;
   const userDataDir = app.getPath("userData");
@@ -66,7 +196,6 @@ function initializeShield(mainWindow, opts = {}) {
   const clamav = resolveClamAVPaths();
   mainWindowRef = mainWindow;
   cyber = opts.cyber ?? new CyberAi(userDataDir);
-
   shield = new ShieldCore({
     clamav: { useDaemon: false, ...clamav },
     virustotal: process.env.ORUN_VT_API_KEY ? { apiKey: process.env.ORUN_VT_API_KEY } : undefined,
@@ -110,6 +239,7 @@ function initializeShield(mainWindow, opts = {}) {
 
   registerIpcHandlers();
   registerAiHandlers();
+  scheduleClamavUpdates();
   console.log("[shield] Orun Shield inicializado");
   return shield;
 }
@@ -332,7 +462,8 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle(ShieldIpcChannel.FULL_SCAN, async (_event, req) => {
-    return shield.fullScan(req.targetPath, req.recursive !== false);
+    const targetPath = assertAbsolutePath(req?.targetPath, "Caminho do scan");
+    return shield.fullScan(targetPath, req.recursive !== false);
   });
 
   ipcMain.handle(ShieldIpcChannel.GET_FINDINGS_LOG, () => {
@@ -340,17 +471,21 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle(ShieldIpcChannel.CHECK_CLAMAV_AVAILABILITY, async () => {
-    if (!shield.clamav) return { available: false };
-    return shield.clamav.checkAvailability();
+    if (!shield.clamav) return { available: false, ...readClamavDatabaseInfo() };
+    const base = await shield.clamav.checkAvailability();
+    return { ...base, ...readClamavDatabaseInfo() };
   });
 
   ipcMain.handle(ShieldIpcChannel.UPDATE_DEFINITIONS, async () => {
     if (!shield.clamav) return { updated: false, log: "ClamAV não configurado neste ShieldCore." };
-    return shield.clamav.updateDefinitions();
+    return refreshClamavDefinitions();
   });
 
   ipcMain.handle(ShieldIpcChannel.BLOCK_IP, async (_event, ip) => {
-    await shield.firewall.blockIP(ip);
+    await blockIpReal(ip);
+    if (shield.firewall?.blockIP) {
+      try { await shield.firewall.blockIP(ip); } catch { /* best effort — regra persistente já criada */ }
+    }
   });
 
   ipcMain.handle(ShieldIpcChannel.QUARANTINE_FINDING, async (_event, finding) => {
@@ -373,7 +508,7 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle(ShieldIpcChannel.ANALYZE_FILE, async (_event, filePath) => {
-    return shield.analyzeFile(filePath);
+    return shield.analyzeFile(assertAbsolutePath(filePath, "Arquivo"));
   });
 
   ipcMain.handle(ShieldIpcChannel.GET_PROCESS_TREE, async () => {
@@ -422,10 +557,22 @@ function registerAiHandlers() {
 }
 
 async function shutdownShield() {
+  if (clamavUpdateTimer) {
+    clearInterval(clamavUpdateTimer);
+    clamavUpdateTimer = null;
+  }
   if (shield) {
     try { await shield.stopMonitoring(); } catch { /* best effort */ }
     shield = null;
   }
 }
 
-module.exports = { initializeShield, shutdownShield, scanPc, scanVulnerabilities, ShieldIpcChannel, AiIpcChannel };
+module.exports = {
+  initializeShield,
+  shutdownShield,
+  scanPc,
+  scanVulnerabilities,
+  refreshClamavDefinitions,
+  ShieldIpcChannel,
+  AiIpcChannel,
+};

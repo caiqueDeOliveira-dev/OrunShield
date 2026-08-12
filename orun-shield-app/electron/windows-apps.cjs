@@ -262,7 +262,7 @@ async function uninstallApp(app, options = {}) {
   const winId = options.wingetId;
   if (winId) {
     try {
-      await execPowerShell(`winget uninstall --id '${sanitize(winId)}' --accept-source-agreements --silent`);
+      await execPowerShell(`winget uninstall --id '${sanitizeWingetId(winId)}' --accept-source-agreements --silent`);
       return { success: true, method: "winget" };
     } catch (err) {
       // cai no fallback do registry
@@ -271,7 +271,7 @@ async function uninstallApp(app, options = {}) {
     try {
       const id = await findWingetId(app);
       if (id) {
-        await execPowerShell(`winget uninstall --id '${sanitize(id)}' --accept-source-agreements --silent`);
+        await execPowerShell(`winget uninstall --id '${sanitizeWingetId(id)}' --accept-source-agreements --silent`);
         return { success: true, method: "winget" };
       }
     } catch { /* fallback */ }
@@ -302,11 +302,16 @@ async function findWingetId(app) {
 }
 
 function sanitize(value) {
-  return String(value).replace(/'/g, "''");
+  return String(value).replace(/'/g, "''").replace(/\0/g, "");
+}
+
+/** wingetId vem do renderer — restrito a caracteres de um ID de pacote. */
+function sanitizeWingetId(value) {
+  return String(value).replace(/[^A-Za-z0-9._+\-/ ]/g, "");
 }
 
 function sanitizeForCmd(value) {
-  return String(value).replace(/"/g, '""');
+  return String(value).replace(/"/g, '""').replace(/\0/g, "");
 }
 
 module.exports = {

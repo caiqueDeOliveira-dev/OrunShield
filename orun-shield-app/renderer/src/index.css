@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Orun Shield — design tokens
+   Identidade: preto profundo (brilhoso, com profundidade) +
+   vermelho-sangue neon como accent único.
+   ============================================================ */
+@theme {
+  /* Preto "brilhoso": não é preto chapado — tem leve matiz,
+     camadas e highlight sutil de topo. */
+  --color-bg: #0b0d10;
+  --color-bg-2: #0f1217;
+  --color-panel: #12161d;
+  --color-panel-2: #171c25;
+  --color-sunken: #0d1015;
+  --color-line: #1d2330;
+  --color-line-2: #2b3342;
+
+  /* Texto: contraste alto sobre o preto */
+  --color-ink: #eceff5;
+  --color-ink-2: #a3adbd;
+  --color-ink-3: #7d8797;
+
+  /* Vermelho-sangue neon */
+  --color-accent: #ff2e36;
+  --color-accent-2: #ff555c;
+  --color-accent-ink: #ffffff;
+
+  --font-sans: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Roboto", sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", monospace;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 12px 32px -16px rgb(0 0 0 / 0.55);
+  --shadow-panel: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.5);
+}
+
 html,
 body,
 #root {
@@ -8,10 +41,27 @@ body,
 
 body {
   margin: 0;
-  background: #09090b;
-  color: #fafafa;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(1100px 480px at 50% -12%, rgb(255 46 54 / 0.06), transparent 62%),
+    radial-gradient(900px 700px at 100% 120%, rgb(255 46 54 / 0.03), transparent 60%),
+    linear-gradient(180deg, #0d0f14 0%, #0b0d10 42%, #0a0c0f 100%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(255 46 54 / 0.35);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(255 46 54 / 0.55);
+  outline-offset: 2px;
 }
 
 ::-webkit-scrollbar {
@@ -24,11 +74,48 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #232a38;
   border-radius: 8px;
-  border: 2px solid #09090b;
+  border: 2px solid #0b0d10;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #313a4c;
+}
+
+/* Barra horizontal com textura mais sutil */
+.scroll-area {
+  scrollbar-gutter: stable;
+}
+
+/* Inputs: fundo sunken para dar profundidade */
+input,
+textarea {
+  color-scheme: dark;
+}
+
+/* ---------- Scan em andamento: shimmer na barra de progresso ---------- */
+@keyframes scan-shimmer {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+
+.scan-shimmer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  animation: scan-shimmer 1.1s linear infinite;
+}
+
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

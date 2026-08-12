@@ -276,6 +276,31 @@ class CyberAi {
   clearCache() {
     this.cache.clear();
   }
+
+  /**
+   * Testa a conexão com o provider configurado (sem quebrar se faltar key).
+   * Retorna { ok, message, provider, model } — nunca lança.
+   */
+  async testConnection() {
+    const cfg = this.config;
+    try {
+      if (cfg.provider === "ollama") {
+        const available = await this.checkOllama();
+        if (!available) return { ok: false, provider: cfg.provider, model: cfg.model, message: "Ollama não está respondendo em localhost:11434. Inicie o serviço (ollama serve) e tente de novo." };
+        return { ok: true, provider: cfg.provider, model: cfg.model, message: `Ollama disponível (modelo padrão: ${cfg.model}).` };
+      }
+      if (!cfg.apiKey) {
+        return { ok: false, provider: cfg.provider, model: cfg.model, message: `Provider ${cfg.provider} requer uma API key para testar.` };
+      }
+      const text = await this.complete([
+        { role: "system", content: "Responda apenas com a palavra OK." },
+        { role: "user", content: "Você está funcionando?" },
+      ], { ...cfg, model: cfg.model });
+      return { ok: true, provider: cfg.provider, model: cfg.model, message: `Conectado com o modelo "${cfg.model}".` };
+    } catch (err) {
+      return { ok: false, provider: cfg.provider, model: cfg.model, message: err instanceof Error ? err.message : String(err) };
+    }
+  }
 }
 
 function fallbackExplanation(finding) {

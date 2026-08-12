@@ -1,7 +1,7 @@
 {
   "name": "orun-shield-app",
   "productName": "Orun Shield",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Orun Shield standalone — Antivírus + Otimizador em um app só.",
   "main": "electron/main.cjs",
   "author": "Orun",
@@ -12,6 +12,7 @@
     "dev:electron": "wait-on tcp:127.0.0.1:5174 && cross-env VITE_DEV_SERVER_URL=http://localhost:5174 electron .",
     "dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:electron\"",
     "typecheck": "tsc --noEmit -p renderer/tsconfig.json",
+    "test": "node scripts/smoke-test.cjs",
     "build:renderer": "vite build --config renderer/vite.config.ts",
     "build": "npm run build:renderer && npm run typecheck",
     "start": "electron .",

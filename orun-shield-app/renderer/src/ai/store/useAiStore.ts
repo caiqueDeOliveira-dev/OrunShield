@@ -3,6 +3,7 @@ import type { ThreatFinding } from "@orun/shield-core";
 import type {
   AiStatus,
   AiConfig,
+  AiConnectionTest,
   FindingExplanation,
   VulnerabilityItem,
   UnusedAppRecommendation,
@@ -11,6 +12,8 @@ import type {
 interface AiState {
   status: AiStatus | null;
   config: AiConfig | null;
+  connectionTest: AiConnectionTest | null;
+  isTestingConnection: boolean;
   explanations: Record<string, FindingExplanation>;
   explainingIds: Set<string>;
   isSummarizing: boolean;
@@ -25,6 +28,7 @@ interface AiState {
   hydrate: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   saveConfig: (partial: Partial<AiConfig>) => Promise<void>;
+  testConnection: () => Promise<void>;
   explainFinding: (finding: ThreatFinding) => Promise<void>;
   summarizeFindings: (findings: ThreatFinding[]) => Promise<void>;
   analyzeVulnerabilities: (items: VulnerabilityItem[]) => Promise<void>;
@@ -40,6 +44,8 @@ interface AiState {
 export const useAiStore = create<AiState>((set, get) => ({
   status: null,
   config: null,
+  connectionTest: null,
+  isTestingConnection: false,
   explanations: {},
   explainingIds: new Set(),
   isSummarizing: false,
@@ -64,11 +70,22 @@ export const useAiStore = create<AiState>((set, get) => ({
     set({ isSavingConfig: true });
     try {
       const config = await window.orunAi.saveConfig(partial);
-      set({ config, status: await window.orunAi.getStatus() });
+      set({ config, status: await window.orunAi.getStatus(), connectionTest: null });
     } catch (err) {
       set({ errors: [{ context: "saveConfig", message: String(err) }, ...get().errors] });
     } finally {
       set({ isSavingConfig: false });
+    }
+  },
+
+  testConnection: async () => {
+    set({ isTestingConnection: true, connectionTest: null });
+    try {
+      set({ connectionTest: await window.orunAi.testConnection() });
+    } catch (err) {
+      set({ connectionTest: { ok: false, provider: get().config?.provider ?? "ollama", model: get().config?.model ?? "", message: String(err) } });
+    } finally {
+      set({ isTestingConnection: false });
     }
   },
 

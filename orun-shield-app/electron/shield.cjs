@@ -414,6 +414,7 @@ function registerAiHandlers() {
   ipcMain.handle(AiIpcChannel.STATUS, async () => cyber.getStatus());
   ipcMain.handle(AiIpcChannel.GET_CONFIG, async () => ({ ...cyber.config }));
   ipcMain.handle(AiIpcChannel.SAVE_CONFIG, async (_event, partial) => cyber.saveConfig(partial));
+  ipcMain.handle(AiIpcChannel.TEST_CONNECTION, async () => cyber.testConnection());
   ipcMain.handle(AiIpcChannel.EXPLAIN_FINDING, async (_event, finding) => cyber.explainFinding(finding));
   ipcMain.handle(AiIpcChannel.SUMMARIZE_FINDINGS, async (_event, findings) => cyber.summarizeFindings(findings));
   ipcMain.handle(AiIpcChannel.ANALYZE_VULNERABILITIES, async (_event, items) => cyber.analyzeVulnerabilities(items));

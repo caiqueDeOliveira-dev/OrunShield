@@ -81,12 +81,19 @@ const aiBridge = {
   getStatus: () => ipcRenderer.invoke(AiIpcChannel.STATUS),
   getConfig: () => ipcRenderer.invoke(AiIpcChannel.GET_CONFIG),
   saveConfig: (partial) => ipcRenderer.invoke(AiIpcChannel.SAVE_CONFIG, partial),
+  testConnection: () => ipcRenderer.invoke(AiIpcChannel.TEST_CONNECTION),
   explainFinding: (finding) => ipcRenderer.invoke(AiIpcChannel.EXPLAIN_FINDING, finding),
   summarizeFindings: (findings) => ipcRenderer.invoke(AiIpcChannel.SUMMARIZE_FINDINGS, findings),
   analyzeVulnerabilities: (items) => ipcRenderer.invoke(AiIpcChannel.ANALYZE_VULNERABILITIES, items),
   analyzeApps: (recommendations) => ipcRenderer.invoke(AiIpcChannel.ANALYZE_APPS, recommendations),
 };
 
+const appBridge = {
+  getInfo: () => ipcRenderer.invoke(AppIpcChannel.GET_APP_INFO),
+  pickDirectory: () => pickDirectory(),
+};
+
 contextBridge.exposeInMainWorld("orunShield", shieldBridge);
 contextBridge.exposeInMainWorld("orunOptimizer", optimizerBridge);
 contextBridge.exposeInMainWorld("orunAi", aiBridge);
+contextBridge.exposeInMainWorld("orunApp", appBridge);

@@ -132,11 +132,27 @@ export interface AiStatus {
   ready: boolean;
 }
 
+export interface AiConnectionTest {
+  ok: boolean;
+  provider: AiProviderKind;
+  model: string;
+  message: string;
+}
+
 export interface FindingExplanation {
   findingId: string;
   explanation: string;
   generatedAt: string;
   isFallback: boolean;
+}
+
+export interface AppInfo {
+  name: string;
+  version: string;
+  platform: string;
+  arch: string;
+  electron: string;
+  node: string;
 }
 
 export interface OrunShieldBridge {
@@ -191,10 +207,16 @@ export interface OrunAiBridge {
   getStatus: () => Promise<AiStatus>;
   getConfig: () => Promise<AiConfig>;
   saveConfig: (partial: Partial<AiConfig>) => Promise<AiConfig>;
+  testConnection: () => Promise<AiConnectionTest>;
   explainFinding: (finding: ThreatFinding) => Promise<FindingExplanation>;
   summarizeFindings: (findings: ThreatFinding[]) => Promise<string>;
   analyzeVulnerabilities: (items: VulnerabilityItem[]) => Promise<string>;
   analyzeApps: (recommendations: UnusedAppRecommendation[]) => Promise<string>;
+}
+
+export interface OrunAppBridge {
+  getInfo: () => Promise<AppInfo>;
+  pickDirectory: () => Promise<string | null>;
 }
 
 declare global {
@@ -202,6 +224,7 @@ declare global {
     orunShield: OrunShieldBridge;
     orunOptimizer: OrunOptimizerBridge;
     orunAi: OrunAiBridge;
+    orunApp: OrunAppBridge;
   }
 }
 

@@ -47,6 +47,15 @@ ipcMain.handle(AppIpcChannel.PICK_DIRECTORY, async (event, defaultPath) => {
   return result.filePaths[0];
 });
 
+ipcMain.handle(AppIpcChannel.GET_APP_INFO, () => ({
+  name: app.getName(),
+  version: app.getVersion(),
+  platform: process.platform,
+  arch: process.arch,
+  electron: process.versions.electron ?? "",
+  node: process.versions.node ?? "",
+}));
+
 let quitting = false;
 app.on("before-quit", async (event) => {
   if (quitting) return;

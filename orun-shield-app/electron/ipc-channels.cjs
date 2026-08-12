@@ -31,6 +31,7 @@ const AiIpcChannel = {
   STATUS: "ai:status",
   GET_CONFIG: "ai:get-config",
   SAVE_CONFIG: "ai:save-config",
+  TEST_CONNECTION: "ai:test-connection",
   EXPLAIN_FINDING: "ai:explain-finding",
   SUMMARIZE_FINDINGS: "ai:summarize-findings",
   ANALYZE_VULNERABILITIES: "ai:analyze-vulnerabilities",
@@ -57,6 +58,7 @@ const OptimizerIpcChannel = {
 
 const AppIpcChannel = {
   PICK_DIRECTORY: "app:pick-directory",
+  GET_APP_INFO: "app:get-info",
 };
 
 module.exports = { ShieldIpcChannel, OptimizerIpcChannel, AiIpcChannel, AppIpcChannel };

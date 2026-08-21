@@ -1,0 +1,24 @@
+{
+  "name": "orun-security-suite",
+  "private": true,
+  "version": "0.3.2",
+  "workspaces": [
+    "orun-shield-core",
+    "orun-sentinela-agent",
+    "orun-shield-mobile",
+    "orun-system-optimizer"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "test:core": "npm run test --workspace=orun-shield-core",
+    "test:sentinela": "npm run test --workspace=orun-sentinela-agent",
+    "test:mobile": "npm run test --workspace=orun-shield-mobile",
+    "test:optimizer": "npm run test --workspace=orun-system-optimizer",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:app": "npm run dev --workspace=orun-shield-app",
+    "build:app": "npm run build --workspace=orun-shield-app",
+    "dist:app": "npm run dist --workspace=orun-shield-app"
+  }
+}

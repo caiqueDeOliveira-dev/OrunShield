@@ -1,8 +1,8 @@
 # Orun Security & Optimization Suite — visão geral
 
-Seis pacotes, dois sistemas independentes que compartilham a mesma filosofia de engenharia: **nunca destrutivo por padrão, sempre com área de espera antes de qualquer exclusão permanente, e proteção estrutural contra os próprios pontos cegos** (não só documentação sobre eles).
+Sete pacotes (incluindo VPN), dois sistemas independentes + VPN que compartilham a mesma filosofia de engenharia: **nunca destrutivo por padrão, sempre com área de espera antes de qualquer exclusão permanente, e proteção estrutural contra os próprios pontos cegos** (não só documentação sobre eles).
 
-## Os dois sistemas
+## Os dois sistemas + VPN
 
 ### 🛡️ Shield — segurança
 | Pacote | O que é | Testes |
@@ -18,15 +18,22 @@ Seis pacotes, dois sistemas independentes que compartilham a mesma filosofia de 
 | `orun-system-optimizer` | Motor: uso de disco, detector de arquivos desnecessários, limpeza com área de espera, verificador/executor de atualizações (winget/brew/apt) | 40 |
 | `orun-system-optimizer-integration` | Cola Electron/React: IPC + tela + store | — (UI) |
 
-**Total: 115 testes automatizados, todos rodando de verdade neste ambiente (não só simulados) — incluindo o `apt` real do sistema operacional e filesystem real via `mkdtemp`.**
+### 🔒 VPN — rede privada
+| Pacote | O que é | Testes |
+|---|---|---|
+| `orun-vpn-core` | Schemas Zod, interfaces *Like, `WgEasyClient` validado contra wg-easy v14 real | 19 |
+| `orun-vpn-electron` | `ElectronVpnBackend` nativo (wg-quick/wireguard.exe) + kill switch nativo (nftables/pf/Windows Firewall) | 24 |
+
+**Total: 158 testes automatizados (115 Shield+Optimizer + 43 VPN), todos rodando de verdade — incluindo `apt` real, filesystem real, API wg-easy v14 real.**
 
 ## Ordem recomendada de integração no `orun-monorepo`
 
-1. `packages/shield-core` e `packages/system-optimizer` primeiro (não dependem de nada além de si mesmos)
+1. `packages/shield-core`, `packages/system-optimizer`, `packages/vpn-core`, `packages/vpn-electron` primeiro (não dependem de nada além de si mesmos)
 2. `packages/sentinela-agent` e `packages/shield-mobile` (dependem de `shield-core`)
-3. Os dois pacotes `-integration` por último — copiar os arquivos soltos pra dentro de `apps/desktop` e `packages/design-system` conforme os READMEs de cada um explicam
-4. Mesclar os dois `preload.ts` (Shield e Optimizer) num só — cada um só adiciona uma chamada de `contextBridge.exposeInMainWorld`, não conflitam entre si
-5. No `main.ts`: `initializeShield(mainWindow)` e `initializeOptimizer(shieldQuarantineDirName)` — nessa ordem, já que o Optimizer aceita opcionalmente o nome da pasta de quarentena do Shield pra também excluí-la dos próprios scans
+3. `packages/vpn-core`/`vpn-electron` já expõem `window.orunVpn.*` no preload — adicionar ao `preload.ts` unificado
+4. Os pacotes `-integration` por último — copiar arquivos soltos pra `apps/desktop` e `packages/design-system`
+5. Mesclar todos os `preload.ts` (Shield, Optimizer, VPN) num só — cada um só adiciona `contextBridge.exposeInMainWorld`
+6. No `main.ts`: `initializeShield(mainWindow)`, `initializeOptimizer(shieldQuarantineDirName)`, `initializeVpn()` — nessa ordem
 
 ## Variáveis de ambiente do ecossistema completo
 
@@ -35,7 +42,9 @@ Seis pacotes, dois sistemas independentes que compartilham a mesma filosofia de 
 | `ORUN_VT_API_KEY` | `shield-core` (VirusTotal), `shield-mobile` (DownloadScanner) | virustotal.com/gui/join-us (gratuita) |
 | `EXPO_PUBLIC_SAFE_BROWSING_KEY` | `shield-mobile` (LinkGuard) | Google Cloud Console |
 | `EXPO_PUBLIC_VT_KEY` | `shield-mobile` (mesma chave do VT acima) | mesma de cima |
-| Config do provider de IA (`ollama`/`anthropic`/`openai-compatible`) | `sentinela-agent` | depende do provider escolhido — Ollama não precisa de chave |
+| Config do provider de IA (`ollama`/`anthropic`/`openai-compatible`) | `sentinela-agent` | depende do provider — Ollama não precisa de chave |
+| `WG_EASY_PASSWORD_HASH` | `vpn-electron` (admin wg-easy) | `docker run --rm ghcr.io/wg-easy/wg-easy wgpw 'senha'` |
+| `WG_HOST` | `vpn-electron` (endpoint servidor) | IP/domínio do servidor wg-easy |
 
 Nenhuma dessas chaves deve viver no client-side/renderer do Electron — mesmo princípio que vocês já usam pro `service_role` do Supabase.
 
@@ -51,9 +60,11 @@ Nenhuma dessas chaves deve viver no client-side/renderer do Electron — mesmo p
 
 | Plataforma | O que foi validado de verdade | O que só foi revisado (não executado) |
 |---|---|---|
-| Linux (este ambiente) | ClamAV, YARA, firewall (iptables, mockado com precisão), apt real, filesystem real | — |
-| Windows | — (nenhum binário Windows disponível neste sandbox) | netsh, winget parsing, jail-monkey Android |
-| macOS | — | PF firewall (não implementado, erro explícito), brew parsing |
-| iOS/Android físico | — | root/jailbreak real, certificate pinning contra Supabase real |
+| Linux (este ambiente) | ClamAV, YARA, firewall (iptables, mockado com precisão), apt real, filesystem real, wg-quick, nftables kill switch, API wg-easy v14 | — |
+| Windows | — (nenhum binário Windows disponível neste sandbox) | netsh, winget parsing, jail-monkey Android, wireguard.exe, Windows Firewall kill switch |
+| macOS | — | PF firewall (não implementado, erro explícito), brew parsing, wireguard, pf kill switch |
+| iOS/Android físico | — | root/jailbreak real, certificate pinning contra Supabase real, WireGuard app QR |
+
+Essa tabela é o roteiro dos testes que só você consegue fazer, fora deste sandbox.
 
 Essa tabela é o roteiro dos testes que só você consegue fazer, fora deste sandbox.

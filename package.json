@@ -6,7 +6,10 @@
     "orun-shield-core",
     "orun-sentinela-agent",
     "orun-shield-mobile",
-    "orun-system-optimizer"
+    "orun-system-optimizer",
+    "orun-vpn-core",
+    "orun-vpn-electron",
+    "orun-identity"
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Sparkles, Cpu, Settings, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldCheck, Sparkles, Cpu, Settings, RefreshCw, CheckCircle2, XCircle, Wifi } from "lucide-react";
 import { ShieldScreen } from "./shield/screens/ShieldScreen";
 import { OptimizerScreen } from "./optimizer/screens/OptimizerScreen";
 import { SettingsScreen } from "./settings/screens/SettingsScreen";
+import { VpnScreen } from "./vpn/VpnScreen";
 import { Button, Spinner } from "./ui";
 import type { AppInfo } from "./bridge";
 
-type View = "shield" | "optimizer" | "settings";
+type View = "shield" | "vpn" | "optimizer" | "settings";
 
 const NAV: { id: View; label: string; hint: string; Icon: typeof ShieldCheck }[] = [
   { id: "shield", label: "Proteção", hint: "Antivírus e defesas", Icon: ShieldCheck },
+  { id: "vpn", label: "VPN", hint: "WireGuard + DNS filtering", Icon: Wifi },
   { id: "optimizer", label: "Otimizador", hint: "Limpeza e updates", Icon: Sparkles },
   { id: "settings", label: "Configurações", hint: "Sentinela e sobre", Icon: Settings },
 ];
@@ -184,6 +186,8 @@ export default function App() {
       <main className="min-w-0 flex-1 overflow-hidden">
         {view === "shield" ? (
           <ShieldScreen />
+        ) : view === "vpn" ? (
+          <VpnScreen />
         ) : view === "optimizer" ? (
           <OptimizerScreen />
         ) : (

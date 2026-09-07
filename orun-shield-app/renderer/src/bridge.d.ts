@@ -17,6 +17,7 @@ import type {
   UpdateActionResult,
   PackageManagerKind,
 } from "@orun/system-optimizer";
+import type { VpnServerConfig, VpnPeer, VpnProfile, VpnConnectionState } from "@orun/vpn-core";
 
 export type MoveToHoldingItem = JunkCandidate | { path: string; sizeBytes: number };
 
@@ -225,11 +226,24 @@ export interface OrunAppBridge {
   pickDirectory: () => Promise<string | null>;
 }
 
+export interface OrunVpnBridge {
+  getConfig: () => Promise<{ servers: VpnServerConfig[] }>;
+  addServer: (server: Omit<VpnServerConfig, "id" | "createdAt" | "peers">) => Promise<{ ok: boolean; id?: string; error?: string }>;
+  removeServer: (id: string) => Promise<{ ok: boolean; error?: string }>;
+  getPeers: (serverId: string) => Promise<VpnPeer[]>;
+  connect: (serverId: string, peerId: string) => Promise<{ ok: boolean; error?: string }>;
+  disconnect: (serverId: string) => Promise<{ ok: boolean; error?: string }>;
+  getState: (serverId: string) => Promise<VpnConnectionState>;
+  setKillSwitch: (serverId: string, enabled: boolean) => Promise<{ ok: boolean; error?: string }>;
+  provisionPeer: (serverId: string, name: string) => Promise<{ ok: boolean; peer?: { id: string; name: string; config: string; qr: string }; error?: string }>;
+}
+
 declare global {
   interface Window {
     orunShield: OrunShieldBridge;
     orunOptimizer: OrunOptimizerBridge;
     orunAi: OrunAiBridge;
+    orunVpn: OrunVpnBridge;
     orunApp: OrunAppBridge;
   }
 }

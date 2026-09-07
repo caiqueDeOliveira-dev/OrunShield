@@ -64,6 +64,18 @@ const AppIpcChannel = {
   GET_APP_INFO: "app:get-info",
 };
 
+const VpnIpcChannel = {
+  GET_CONFIG: "vpn:get-config",
+  ADD_SERVER: "vpn:add-server",
+  REMOVE_SERVER: "vpn:remove-server",
+  GET_PEERS: "vpn:get-peers",
+  CONNECT: "vpn:connect",
+  DISCONNECT: "vpn:disconnect",
+  GET_STATE: "vpn:get-state",
+  SET_KILL_SWITCH: "vpn:set-kill-switch",
+  PROVISION_PEER: "vpn:provision-peer",
+};
+
 function pickDirectory(defaultPath) {
   return ipcRenderer.invoke(AppIpcChannel.PICK_DIRECTORY, defaultPath);
 }
@@ -147,6 +159,18 @@ const aiBridge = {
   analyzeApps: (recommendations) => ipcRenderer.invoke(AiIpcChannel.ANALYZE_APPS, recommendations),
 };
 
+const vpnBridge = {
+  getConfig: () => ipcRenderer.invoke(VpnIpcChannel.GET_CONFIG),
+  addServer: (server) => ipcRenderer.invoke(VpnIpcChannel.ADD_SERVER, server),
+  removeServer: (id) => ipcRenderer.invoke(VpnIpcChannel.REMOVE_SERVER, id),
+  getPeers: (serverId) => ipcRenderer.invoke(VpnIpcChannel.GET_PEERS, serverId),
+  connect: (serverId, peerId) => ipcRenderer.invoke(VpnIpcChannel.CONNECT, serverId, peerId),
+  disconnect: (serverId) => ipcRenderer.invoke(VpnIpcChannel.DISCONNECT, serverId),
+  getState: (serverId) => ipcRenderer.invoke(VpnIpcChannel.GET_STATE, serverId),
+  setKillSwitch: (serverId, enabled) => ipcRenderer.invoke(VpnIpcChannel.SET_KILL_SWITCH, serverId, enabled),
+  provisionPeer: (serverId, name) => ipcRenderer.invoke(VpnIpcChannel.PROVISION_PEER, serverId, name),
+};
+
 const appBridge = {
   getInfo: () => ipcRenderer.invoke(AppIpcChannel.GET_APP_INFO),
   pickDirectory: () => pickDirectory(),
@@ -155,4 +179,5 @@ const appBridge = {
 contextBridge.exposeInMainWorld("orunShield", shieldBridge);
 contextBridge.exposeInMainWorld("orunOptimizer", optimizerBridge);
 contextBridge.exposeInMainWorld("orunAi", aiBridge);
+contextBridge.exposeInMainWorld("orunVpn", vpnBridge);
 contextBridge.exposeInMainWorld("orunApp", appBridge);
